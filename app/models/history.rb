@@ -119,39 +119,22 @@ class History < ApplicationRecord
     create_history(patient, created_by, HISTORY_TYPES[:record_automatically_closed], comment)
   end
 
-  def self.monitoring_actions(history, diff_state)
-    return if diff_state.nil?
-
-    History.monitoring_status(history) if diff_state.include?(:monitoring)
-    History.exposure_risk_assessment(history) if diff_state.include?(:exposure_risk_assessment)
-    History.monitoring_plan(history) if diff_state.include?(:monitoring_plan)
-    History.case_status(history, diff_state) if diff_state.include?(:case_status)
-    History.public_health_action(history) if diff_state.include?(:public_health_action)
-    History.jurisdiction(history) if diff_state.include?(:jurisdiction_path)
-    History.assigned_user(history) if diff_state.include?(:assigned_user)
-    History.pause_notifications(history) if diff_state.include?(:pause_notifications)
-    History.symptom_onset(history) if diff_state.include?(:symptom_onset)
-    History.last_date_of_exposure(history) if diff_state.include?(:last_date_of_exposure)
-    History.continuous_exposure(history) if diff_state.include?(:continuous_exposure)
-    History.extended_isolation(history) if diff_state.include?(:extended_isolation)
-  end
-
   def self.monitoring_status(history)
     field = {
       name: 'Monitoring Status',
-      old_value: history[:patient][:monitoring] ? 'Monitoring' : 'Not Monitoring',
-      new_value: history[:params][:monitoring] ? 'Monitoring' : 'Not Monitoring'
+      old_value: history[:patient_before][:monitoring] ? 'Monitoring' : 'Not Monitoring',
+      new_value: history[:updates][:monitoring] ? 'Monitoring' : 'Not Monitoring'
     }
-    return if field[:old_value] == field[:new_value]
 
+    return if field[:old_value] == field[:new_value]
     create_history(history[:patient], history[:created_by], HISTORY_TYPES[:monitoring_change], compose_message(history, field))
   end
 
   def self.exposure_risk_assessment(history)
     field = {
       name: 'Exposure Risk Assessment',
-      old_value: history[:patient][:exposure_risk_assessment],
-      new_value: history[:params][:exposure_risk_assessment]
+      old_value: history[:patient_before][:exposure_risk_assessment],
+      new_value: history[:updates][:exposure_risk_assessment]
     }
     return if field[:old_value] == field[:new_value]
 
@@ -161,8 +144,8 @@ class History < ApplicationRecord
   def self.monitoring_plan(history)
     field = {
       name: 'Monitoring Plan',
-      old_value: history[:patient][:monitoring_plan],
-      new_value: history[:params][:monitoring_plan]
+      old_value: history[:patient_before][:monitoring_plan],
+      new_value: history[:updates][:monitoring_plan]
     }
     return if field[:old_value] == field[:new_value]
 
@@ -172,16 +155,16 @@ class History < ApplicationRecord
   def self.case_status(history, diff_state)
     field = {
       name: 'Case Status',
-      old_value: history[:patient][:case_status],
-      new_value: history[:params][:case_status]
+      old_value: history[:patient_before][:case_status],
+      new_value: history[:updates][:case_status]
     }
     return if field[:old_value] == field[:new_value]
 
-    if !history[:params][:monitoring].blank? && !history[:params][:monitoring]
+    if !history[:updates][:monitoring].blank? && !history[:updates][:monitoring]
       # monitoree went from actively monitoring to not monitoring
       history[:note] = ', and chose to "End Monitoring"'
       # monitoree went from exposure to isolation (only applies to when user deliberately selected to continue monitoring in isolation workflow)
-    elsif !history[:patient][:isolation].present? && history[:params][:isolation].present? && diff_state.include?(:isolation)
+    elsif !history[:patient_before][:isolation].present? && history[:updates][:isolation].present? && diff_state.include?(:isolation)
       history[:note] = ', and chose to "Continue Monitoring in Isolation Workflow"'
     end
 
@@ -191,8 +174,8 @@ class History < ApplicationRecord
   def self.public_health_action(history)
     field = {
       name: 'Latest Public Health Action',
-      old_value: history[:patient][:public_health_action],
-      new_value: history[:params][:public_health_action]
+      old_value: history[:patient_before][:public_health_action],
+      new_value: history[:updates][:public_health_action]
     }
     return if field[:old_value] == field[:new_value]
 
@@ -202,8 +185,8 @@ class History < ApplicationRecord
   def self.jurisdiction(history)
     field = {
       name: 'Jurisdiction',
-      old_value: Jurisdiction.find(history[:patient][:jurisdiction_id])[:path],
-      new_value: Jurisdiction.find(history[:params][:jurisdiction])[:path]
+      old_value: Jurisdiction.find(history[:patient_before][:jurisdiction_id])[:path],
+      new_value: Jurisdiction.find(history[:updates][:jurisdiction_id])[:path]
     }
     return if field[:old_value] == field[:new_value]
 
@@ -213,8 +196,8 @@ class History < ApplicationRecord
   def self.assigned_user(history)
     field = {
       name: 'Assigned User',
-      old_value: history[:patient][:assigned_user],
-      new_value: history[:params][:assigned_user]
+      old_value: history[:patient_before][:assigned_user],
+      new_value: history[:updates][:assigned_user]
     }
     return if field[:old_value] == field[:new_value]
 
@@ -224,12 +207,12 @@ class History < ApplicationRecord
   def self.pause_notifications(history)
     field = {
       name: 'Notification Status',
-      old_value: history[:patient][:pause_notifications] ? 'paused' : 'resumed',
-      new_value: history[:params][:pause_notifications] ? 'paused' : 'resumed'
+      old_value: history[:patient_before][:pause_notifications] ? 'paused' : 'resumed',
+      new_value: history[:updates][:pause_notifications] ? 'paused' : 'resumed'
     }
     return if field[:old_value] == field[:new_value]
 
-    creator = history[:household] == :patient ? 'User' : 'System'
+    creator = history[:household_status] == :patient ? 'User' : 'System'
     comment = "#{creator} #{field[:new_value]} notifications for this monitoree#{compose_explanation(history, field)}."
     create_history(history[:patient], history[:created_by], HISTORY_TYPES[:monitoring_change], comment)
   end
@@ -238,8 +221,8 @@ class History < ApplicationRecord
     field = {
       name: 'Symptom Onset Date',
       type: 'date',
-      old_value: history[:patient][:symptom_onset]&.to_date&.strftime('%m/%d/%Y'),
-      new_value: history[:params][:symptom_onset]&.to_date&.strftime('%m/%d/%Y')
+      old_value: history[:patient_before][:symptom_onset]&.to_date&.strftime('%m/%d/%Y'),
+      new_value: history[:updates][:symptom_onset]&.to_date&.strftime('%m/%d/%Y')
     }
     return if field[:old_value] == field[:new_value]
 
@@ -252,8 +235,8 @@ class History < ApplicationRecord
     field = {
       name: 'Last Date of Exposure',
       type: 'date',
-      old_value: history[:patient][:last_date_of_exposure]&.to_date&.strftime('%m/%d/%Y'),
-      new_value: history[:params][:last_date_of_exposure]&.to_date&.strftime('%m/%d/%Y')
+      old_value: history[:patient_before][:last_date_of_exposure]&.to_date&.strftime('%m/%d/%Y'),
+      new_value: history[:updates][:last_date_of_exposure]&.to_date&.strftime('%m/%d/%Y')
     }
     return if field[:old_value] == field[:new_value]
 
@@ -263,12 +246,12 @@ class History < ApplicationRecord
   def self.continuous_exposure(history)
     field = {
       name: 'Continuous Exposure',
-      old_value: history[:patient][:continuous_exposure] ? 'on' : 'off',
-      new_value: history[:params][:continuous_exposure] ? 'on' : 'off'
+      old_value: history[:patient_before][:continuous_exposure] ? 'on' : 'off',
+      new_value: history[:updates][:continuous_exposure] ? 'on' : 'off'
     }
     return if field[:old_value] == field[:new_value]
 
-    creator = history[:household] == :patient ? 'User' : 'System'
+    creator = history[:household_status] == :patient ? 'User' : 'System'
     comment = "#{creator} turned #{field[:new_value]} #{field[:name]}#{compose_explanation(history, field)}."
     create_history(history[:patient], history[:created_by], HISTORY_TYPES[:monitoring_change], comment)
   end
@@ -277,8 +260,8 @@ class History < ApplicationRecord
     field = {
       name: 'Extended Isolation',
       type: 'date',
-      old_value: history[:patient][:extended_isolation]&.to_date&.strftime('%m/%d/%Y'),
-      new_value: history[:params][:extended_isolation]&.to_date&.strftime('%m/%d/%Y')
+      old_value: history[:patient_before][:extended_isolation]&.to_date&.strftime('%m/%d/%Y'),
+      new_value: history[:updates][:extended_isolation]&.to_date&.strftime('%m/%d/%Y')
     }
     return if field[:old_value] == field[:new_value]
 
@@ -316,12 +299,11 @@ class History < ApplicationRecord
     return if patient.nil?
 
     patient = patient.id if patient.respond_to?(:id)
-
     History.create!(created_by: created_by, comment: comment, patient_id: patient, history_type: type)
   end
 
   private_class_method def self.compose_message(history, field)
-    creator = history[:household] == :patient ? 'User' : 'System'
+    creator = history[:household_status] == :patient ? 'User' : 'System'
     verb = field[:new_value].blank? ? 'cleared' : 'changed'
     from_text = field[:old_value].blank? ? 'blank' : "\"#{field[:old_value]}\""
     to_text = field[:new_value].blank? ? 'blank' : "\"#{field[:new_value]}\""
@@ -335,14 +317,14 @@ class History < ApplicationRecord
   end
 
   private_class_method def self.compose_explanation(history, field)
-    if history[:household] == :patient && history[:propagation] == :group
+    if history[:household_status] == :patient && history[:propagation] == :group
       " and chose to update this #{field[:type]} for all household members"
-    elsif history[:household] == :patient && history[:propagation] == :group_cm
+    elsif history[:household_status] == :patient && history[:propagation] == :group_cm
       " and chose to update this #{field[:type]} for household members under continuous exposure"
-    elsif history[:household] != :patient && history[:propagation] == :group
+    elsif history[:household_status] != :patient && history[:propagation] == :group
       " because User updated #{field[:name]} for another member in this monitoree's household and chose to update this
         #{field[:type].nil? ? 'field' : field[:type]} for all household members"
-    elsif history[:household] != :patient && history[:propagation] == :group_cm
+    elsif history[:household_status] != :patient && history[:propagation] == :group_cm
       " because User updated #{field[:name]} for another member in this monitoree's household and chose to update this
         #{field[:type].nil? ? 'field' : field[:type]} for household members under continuous exposure"
     else
