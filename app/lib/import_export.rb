@@ -15,72 +15,54 @@ module ImportExport # rubocop:todo Metrics/ModuleLength
   include ExcelSanitizer
 
   # Writes export data to file(s)
-  def write_export_data_to_files(config, patients, outer_batch_size, inner_batch_size)
+  def write_export_data_to_files(config, patients, inner_batch_size)
     case config[:format]
     when 'csv'
-      csv_export(config, patients, outer_batch_size, inner_batch_size)
+      csv_export(config, patients, inner_batch_size)
     when 'xlsx'
-      xlsx_export(config, patients, outer_batch_size, inner_batch_size)
+      xlsx_export(config, patients, inner_batch_size)
     end
   end
 
   # Creates a list of csv files from exported data
-  def csv_export(config, patients, outer_batch_size, inner_batch_size)
-    files = []
-
+  def csv_export(config, patients, inner_batch_size)
     # Determine selected data types for export
     data_types = CUSTOM_EXPORT_OPTIONS.keys.select { |data_type| config.dig(:data, data_type, :checked).present? }
 
     # Get all of the field data based on the config
     field_data, symptom_names = get_field_data(config, patients)
 
-    # Declare variables in scope outside of batch loop
-    csvs = nil
-    packages = nil
-    inner_batch_iterations_per_outer_batch = outer_batch_size / inner_batch_size
-    total_inner_batches = (patients.size / inner_batch_size.to_f).ceil
+    files = []
+    csvs = {}
+    packages = {}
+
+    data_types.each do |data_type|
+      # Create CSV with column headers
+      package = CSV.generate(headers: true) do |csv|
+        csv << field_data.dig(data_type, :headers)
+        csvs[data_type] = csv
+      end
+      packages[data_type] = package
+    end
 
     # NOTE: in_batches appears to NOT sort within batches, so explicit ordering on ID is also done deeper down.
     # The reorder('') here allows this ordering done later on to work properly.
-    patients.reorder('').in_batches(of: inner_batch_size).each_with_index do |batch_group, inner_batch_index|
-      # 1) Create CSV files on the first inner batch iteration of each outer batch. If `outer_batch_size` is 10,000 and `inner_batch_size` is 100,
-      #    then this will create a new CSV every 100 batches, therefore handling the outer batching.
-      if (inner_batch_index % inner_batch_iterations_per_outer_batch).zero?
-        # One file for all data types, each data type in a different tab
-        csvs = {}
-        packages = {}
-        data_types.each do |data_type|
-          # Create CSV with column headers
-          package = CSV.generate(headers: true) do |csv|
-            csv << field_data.dig(data_type, :headers)
-            csvs[data_type] = csv
-          end
-          packages[data_type] = package
-        end
-      end
-
-      # 2) Get export data in batches to decrease size of export data hash maintained in memory
+    patients.reorder('').in_batches(of: inner_batch_size).each do |batch_group|
+      # Get export data in batches to decrease size of export data hash maintained in memory
       exported_data = get_export_data(batch_group.order(:id), config[:data], field_data, symptom_names)
       data_types.each do |data_type|
         exported_data[data_type]&.each { |record| csvs[data_type] << record }
       end
-
-      # 3) Check if the next inner_batch_index is the start of a new outer batch or if this current batch is the final batch
-      #    If so, save files to db as this is the end of the current outer batch
-      next unless ((inner_batch_index + 1) % inner_batch_iterations_per_outer_batch).zero? || inner_batch_index == total_inner_batches - 1
-
-      outer_batch_index = inner_batch_index * inner_batch_size / outer_batch_size
-      data_types.each do |data_type|
-        file = { filename: build_export_filename(config, data_type, outer_batch_index, false), content: Base64.encode64(packages[data_type]) }
-        files << save_file(config, file)
-      end
     end
 
+    data_types.each do |data_type|
+      files << { filename: build_export_filename(config, nil, false), content: StringIO.new(packages[data_type]) }
+    end
     files
   end
 
   # Creates a list of excel files from exported data
-  def xlsx_export(config, patients, outer_batch_size, inner_batch_size)
+  def xlsx_export(config, patients, inner_batch_size)
     files = []
     separate_files = config[:separate_files].present?
 
@@ -91,36 +73,28 @@ module ImportExport # rubocop:todo Metrics/ModuleLength
     field_data, symptom_names = get_field_data(config, patients)
 
     # Declare variables in scope outside of batch loop
-    workbooks = nil if separate_files
-    workbook = nil unless separate_files
     sheets = nil
     last_row_nums = nil
-    inner_batch_iterations_per_outer_batch = outer_batch_size / inner_batch_size
-    total_inner_batches = (patients.size / inner_batch_size.to_f).ceil
+
+    # One file for all data types, each data type in a different tab
+    workbooks = {} if separate_files
+    workbook = FastExcel.open(constant_memory: true) unless separate_files
+    sheets = {}
+    last_row_nums = {}
+    data_types.each do |data_type|
+      workbook = FastExcel.open(constant_memory: true) if separate_files
+      worksheet = workbook.add_worksheet(config.dig(:data, data_type, :tab) || CUSTOM_EXPORT_OPTIONS.dig(data_type, :label))
+      worksheet.auto_width = true
+      worksheet.append_row(field_data.dig(data_type, :headers))
+      last_row_nums[data_type] = 0
+      sheets[data_type] = worksheet
+      workbooks[data_type] = workbook if separate_files
+    end
 
     # NOTE: in_batches appears to NOT sort within batches, so explicit ordering on ID is also done deeper down.
     # The reorder('') here allows this ordering done later on to work properly.
-    patients.reorder('').in_batches(of: inner_batch_size).each_with_index do |batch_group, inner_batch_index|
-      # 1) Create excel file(s) on the first inner batch iteration of each outer batch. If `outer_batch_size` is 10,000 and `inner_batch_size` is 100,
-      #    then this will create a new excel file(s) every 100 batches, therefore handling the outer batching.
-      if (inner_batch_index % inner_batch_iterations_per_outer_batch).zero?
-        # One file for all data types, each data type in a different tab
-        workbooks = {} if separate_files
-        workbook = FastExcel.open(constant_memory: true) unless separate_files
-        sheets = {}
-        last_row_nums = {}
-        data_types.each do |data_type|
-          workbook = FastExcel.open(constant_memory: true) if separate_files
-          worksheet = workbook.add_worksheet(config.dig(:data, data_type, :tab) || CUSTOM_EXPORT_OPTIONS.dig(data_type, :label))
-          worksheet.auto_width = true
-          worksheet.append_row(field_data.dig(data_type, :headers))
-          last_row_nums[data_type] = 0
-          sheets[data_type] = worksheet
-          workbooks[data_type] = workbook if separate_files
-        end
-      end
-
-      # 2) Get export data in batches to decrease size of export data hash maintained in memory
+    patients.reorder('').in_batches(of: inner_batch_size).each do |batch_group|
+      # Get export data in batches to decrease size of export data hash maintained in memory
       exported_data = get_export_data(batch_group.order(:id), config[:data], field_data, symptom_names)
       data_types.each do |data_type|
         exported_data[data_type]&.each do |record|
@@ -131,21 +105,14 @@ module ImportExport # rubocop:todo Metrics/ModuleLength
           end
         end
       end
+    end
 
-      # 3) Check if the next inner_batch_index is the start of a new outer batch or if this current batch is the final batch
-      #    If so, save files to db as this is the end of the current outer batch
-      next unless ((inner_batch_index + 1) % inner_batch_iterations_per_outer_batch).zero? || inner_batch_index == total_inner_batches - 1
-
-      outer_batch_index = inner_batch_index * inner_batch_size / outer_batch_size
-      if separate_files
-        data_types.each do |data_type|
-          file = { filename: build_export_filename(config, data_type, outer_batch_index, false), content: Base64.encode64(workbooks[data_type].read_string) }
-          files << save_file(config, file)
-        end
-      else
-        file = { filename: build_export_filename(config, nil, outer_batch_index, false), content: Base64.encode64(workbook.read_string) }
-        files << save_file(config, file)
+    if separate_files
+      data_types.each do |data_type|
+        files << { filename: build_export_filename(config, data_type, false), content: StringIO.new(workbooks[data_type].read_string) }
       end
+    else
+      files << { filename: build_export_filename(config, nil, false), content: StringIO.new(workbook.read_string) }
     end
 
     files
@@ -490,31 +457,16 @@ module ImportExport # rubocop:todo Metrics/ModuleLength
     records
   end
 
-  # Builds a file name using the base name, index, date, and extension.
-  # Ex: "Sara-Alert-Linelist-Isolation-2020-09-01T14:15:05-04:00-1"
-  def build_export_filename(config, data_type, index, glob)
+  # Builds a file name using the base name, date, and extension.
+  # Ex: "Sara-Alert-Linelist-Isolation-2020-09-01T14:15:05-04:00"
+  def build_export_filename(config, data_type, glob)
     return unless config[:export_type].present? && EXPORT_TYPES.key?(config[:export_type])
 
     if config[:filename_data_type].present? && data_type.present? && CUSTOM_EXPORT_OPTIONS[data_type].present?
       data_type_name = config.dig(:data, data_type, :name) || CUSTOM_EXPORT_OPTIONS.dig(data_type, :label)&.gsub(' ', '-')
     end
     base_name = "#{EXPORT_TYPES.dig(config[:export_type], :filename)}#{data_type_name ? "-#{data_type_name}" : ''}"
-    timestamp = glob ? '????-??-??T??_??_?????_??' : DateTime.now
-    "#{base_name}-#{timestamp}#{index.present? ? "-#{index + 1}" : ''}.#{config[:format]}"
-  end
-
-  # Write file and create lookup
-  def save_file(config, file)
-    lookup = SecureRandom.uuid
-    if ActiveRecord::Base.logger.formatter.nil?
-      download = Download.insert(user_id: config[:user_id], export_type: config[:export_type], filename: file[:filename],
-                                 lookup: lookup, contents: file[:content], created_at: DateTime.now, updated_at: DateTime.now)
-    else
-      ActiveRecord::Base.logger.silence do
-        download = Download.insert(user_id: config[:user_id], export_type: config[:export_type], filename: file[:filename],
-                                   lookup: lookup, contents: file[:content], created_at: DateTime.now, updated_at: DateTime.now)
-      end
-    end
-    { lookup: lookup, filename: file[:filename] }
+    timestamp = glob ? '????-??-??T??-??-?????-??' : DateTime.now
+    "#{base_name}-#{timestamp}.#{config[:format]}"
   end
 end

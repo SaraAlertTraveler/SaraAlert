@@ -16,26 +16,20 @@ class PublicHealthMonitoringExportVerifier < ApplicationSystemTestCase
     user = @@system_test_utils.get_user(user_label)
     export_type = "csv_linelist_#{workflow}".to_sym
     download_export_files(user, export_type)
-    patients = user.jurisdiction.all_patients_excluding_purged.where(isolation: workflow == :isolation)
+    patients = user.jurisdiction.all_patients_excluding_purged.where(isolation: workflow == :isolation).reorder('')
 
-    # Verify per outer batch (file)
-    patients.reorder('').in_batches(of: ENV['EXPORT_OUTER_BATCH_SIZE'].to_i).each_with_index do |patients_group, index|
-      csv = get_csv(build_export_filename({ export_type: export_type, format: :csv }, nil, index, true))
-      verify_csv_linelist_export(csv, LINELIST_HEADERS, patients_group.order(:id))
-    end
+    csv = get_csv(build_export_filename({ export_type: export_type, format: :csv }, nil, true))
+    verify_csv_linelist_export(csv, LINELIST_HEADERS, patients.order(:id))
   end
 
   def verify_sara_alert_format(user_label, workflow)
     user = @@system_test_utils.get_user(user_label)
     export_type = "sara_alert_format_#{workflow}".to_sym
     download_export_files(user, export_type)
-    patients = user.jurisdiction.all_patients_excluding_purged.where(isolation: workflow == :isolation)
+    patients = user.jurisdiction.all_patients_excluding_purged.where(isolation: workflow == :isolation).reorder('')
 
-    # Verify per outer batch (file)
-    patients.reorder('').in_batches(of: ENV['EXPORT_OUTER_BATCH_SIZE'].to_i).each_with_index do |patients_group, index|
-      xlsx = get_xlsx(build_export_filename({ export_type: export_type, format: :xlsx }, nil, index, true))
-      verify_sara_alert_format_export(xlsx, patients_group.order(:id))
-    end
+    xlsx = get_xlsx(build_export_filename({ export_type: export_type, format: :xlsx }, nil, true))
+    verify_sara_alert_format_export(xlsx, patients.order(:id))
   end
 
   def verify_full_history_patients(user_label, scope)
@@ -66,17 +60,14 @@ class PublicHealthMonitoringExportVerifier < ApplicationSystemTestCase
     download_export_files(user, export_type)
     patients = user.jurisdiction.all_patients_excluding_purged.order(:id)
     patients = patients.purge_eligible if scope == :purgeable
-    patients = patients.order(:id)
+    patients_group = patients.order(:id)
 
-    # Verify per outer batch (file)
-    patients.reorder('').in_batches(of: ENV['EXPORT_OUTER_BATCH_SIZE'].to_i).each_with_index do |patients_group, index|
-      xlsx_monitorees = get_xlsx(build_export_filename(config, :patients, index, true))
-      xlsx_assessments = get_xlsx(build_export_filename(config, :assessments, index, true))
-      xlsx_lab_results = get_xlsx(build_export_filename(config, :laboratories, index, true))
-      xlsx_vaccines = get_xlsx(build_export_filename(config, :vaccines, index, true))
-      xlsx_histories = get_xlsx(build_export_filename(config, :histories, index, true))
-      verify_full_history_export(xlsx_monitorees, xlsx_assessments, xlsx_lab_results, xlsx_vaccines, xlsx_histories, patients_group)
-    end
+    xlsx_monitorees = get_xlsx(build_export_filename(config, :patients, true))
+    xlsx_assessments = get_xlsx(build_export_filename(config, :assessments, true))
+    xlsx_lab_results = get_xlsx(build_export_filename(config, :laboratories, true))
+    xlsx_vaccines = get_xlsx(build_export_filename(config, :vaccines, index, true))
+    xlsx_histories = get_xlsx(build_export_filename(config, :histories, true))
+    verify_full_history_export(xlsx_monitorees, xlsx_assessments, xlsx_lab_results, xlsx_vaccines, xlsx_histories, patients_group)
   end
 
   def verify_full_history_patient(patient_id)
@@ -96,22 +87,17 @@ class PublicHealthMonitoringExportVerifier < ApplicationSystemTestCase
     download_export_files(user, export_type)
 
     patients = patients_by_query(user, settings.dig(:data, :patients, :query) || {})
+    patients_group = patients.reorder('')
 
     if settings[:format] == :csv
-      # Verify per outer batch (file)
-      patients.reorder('').in_batches(of: ENV['EXPORT_OUTER_BATCH_SIZE'].to_i).each_with_index do |patients_group, index|
-        export_files = {}
-        settings[:data]&.each_key do |data_type|
-          export_files[data_type] = get_csv(build_export_filename(config, data_type, index, true)) if settings.dig(:data, data_type, :checked)&.present?
-        end
-        verify_custom_export_csv(patients_group, settings, export_files)
+      export_files = {}
+      settings[:data]&.each_key do |data_type|
+        export_files[data_type] = get_csv(build_export_filename(config, data_type, true)) if settings.dig(:data, data_type, :checked)&.present?
       end
+      verify_custom_export_csv(patients_group, settings, export_files)
     else
-      # Verify per outer batch (file)
-      patients.reorder('').in_batches(of: ENV['EXPORT_OUTER_BATCH_SIZE'].to_i).each_with_index do |patients_group, index|
-        xlsx = get_xlsx(build_export_filename(config, nil, index, true))
-        verify_custom_export_xlsx(patients_group.order(:id), settings, xlsx)
-      end
+      xlsx = get_xlsx(build_export_filename(config, nil, true))
+      verify_custom_export_xlsx(patients_group.order(:id), settings, xlsx)
     end
   end
 
@@ -177,6 +163,8 @@ class PublicHealthMonitoringExportVerifier < ApplicationSystemTestCase
   end
 
   def verify_full_history_export(xlsx_monitorees, xlsx_assessments, xlsx_lab_results, xlsx_vaccines, xlsx_histories, patients)
+    # Convert patients back into an AR collection for compatability
+    patients = Patient.where(id: patients.id)
     monitorees_list = xlsx_monitorees.sheet('Monitorees List')
     assert_equal(patients.size, monitorees_list.last_row - 1, 'Number of patients in Monitorees List')
     FULL_HISTORY_PATIENTS_HEADERS.each_with_index do |header, col|
@@ -450,7 +438,8 @@ class PublicHealthMonitoringExportVerifier < ApplicationSystemTestCase
   def download_export_files(user, export_type)
     sleep(2) # wait for export and download to complete
     Download.where(user_id: user.id, export_type: export_type.to_s).where('created_at > ?', 10.seconds.ago).find_each do |download|
-      visit "/export/download/#{download.lookup}"
+      visit "/export/download/#{download.id}"
+      click_on(class: 'btn')
     end
   end
 
