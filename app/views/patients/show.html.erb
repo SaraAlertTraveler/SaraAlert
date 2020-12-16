@@ -79,8 +79,7 @@
         <%= react_component('subject/ContactAttempt', { authenticity_token: form_authenticity_token, patient: @patient }) %>
       </div>
     </div>
-    <% columns = [] %>
-    <% @patient.assessments.includes([:reported_condition]).each { |assessment| columns.concat(assessment.all_symptom_names) } %>
+    <% columns = Assessment.get_symptom_names_for_assessments(@patient.assessments.pluck(:id)) %>
     <% columns = columns.uniq.sort %>
     <table class="assessment_table table table-sm table-striped table-bordered table-hover table-smaller-font">
       <thead>
@@ -97,54 +96,6 @@
           <th class="DataTable-table-header">Actions</th>
         </tr>
       </thead>
-      <tbody>
-        <% @patient.assessments.order('created_at').each do |assessment| -%>
-        <% if assessment.symptomatic %>
-        <tr class="table-danger">
-          <% else %>
-        <tr>
-          <% end %>
-          <td><%= assessment.id %></td>
-          <% unless @patient.isolation %>
-          <td><% if assessment.symptomatic %>Yes<% else %>No<% end %></td>
-          <% end %>
-          <td><%= assessment.who_reported %></td>
-          <td><%= local_time(assessment.created_at, '%Y-%m-%d %H:%M %Z') %></td>
-          <% columns.each do |column| -%>
-          <% if assessment.get_reported_symptom_by_name(column) == nil %>
-          <td></td>
-          <% end %>
-          <%passes_threshold = assessment.symptom_passes_threshold(column)%>
-          <%symptom_value = assessment.get_reported_symptom_value(column)%>
-          <% if assessment.get_reported_symptom_by_name(column)&.type == "BoolSymptom"%>
-          <% if symptom_value == true %>
-          <% symptom_value = 'Yes' %>
-          <% elsif symptom_value == false %>
-          <% symptom_value = 'No'%>
-          <%end%>
-          <td><% if passes_threshold==true -%><span class="concern"><%=symptom_value%></span><% elsif passes_threshold==false -%><%=symptom_value%><%else -%><% end -%></td>
-          <% end %>
-          <% if assessment.get_reported_symptom_by_name(column)&.type == "FloatSymptom" || assessment.get_reported_symptom_by_name(column)&.type == "IntegerSymptom"%>
-          <td><% if passes_threshold==true -%><span class="concern"><%=symptom_value%></span><% elsif passes_threshold==false -%><%=symptom_value%><%else -%><% end -%></td>
-          <% end %>
-          <% end -%>
-          <td>
-            <div class="dropdown">
-              <button class="btn btn-sm btn-outline-primary dropdown-toggle btn-block a-dropdown" type="button" id="actionsButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                <i class="fas fa-cogs fw"></i>
-              </button>
-              <div class="dropdown-menu dropdown-menu-right" aria-labelledby="actionsButton">
-                <button type="button" data-toggle="modal" data-target="#modal-<%= assessment.id %>" class="dropdown-item"><i class="fas fa-edit fa-fw"></i> Edit</button>
-                <%= react_component('subject/AddReportNote', { assessment: assessment, patient: @patient, authenticity_token: form_authenticity_token }) %>
-                <% unless @patient.isolation %>
-                <%= react_component('subject/ClearSingleReport', { assessment_id: assessment.id, patient: @patient, authenticity_token: form_authenticity_token }) %>
-                <% end %>
-              </div>
-            </div>
-          </td>
-        </tr>
-        <% end -%>
-      </tbody>
     </table>
     <%= react_component('subject/LastDateExposure', {
                           authenticity_token: form_authenticity_token,
@@ -281,20 +232,35 @@
 <script>
   $(document).ready(function() {
     $('.assessment_table').DataTable({
+      "serverSide": true,
+      "ajax": "<%= @patient.id %>/assessments_data/",
+      'processing': true,
       "search": false,
       "info": false,
       "lengthMenu": [10, 15, 25, 50],
       "pageLength": 15,
-      "columnDefs": [{
-        "orderable": false,
-        "targets": -1
-      }],
       "oLanguage": {
         "sSearch": "Search Reports:"
       },
-      "order": [
-        [0, "desc"]
+      "columns": [
+        { "data": "id" },
+        // TODO: Need to add "table-danger" class to row if symptomatic
+        { "data": "symptomatic" },
+        { "data": "who_reported" },
+        // TODO: Need to convert to local time
+        { "data": "created_at" },
+        // TODO: Need to add "concern" class if passes threshold
+        <% columns.each do |column| -%>
+          { "data": "<%= column %>"},
+        <% end -%>
+        // TODO: Add action dropdown
+        { 
+          "fnCreatedCell": function (nTd, sData, oData, iRow, iCol) {
+            $(nTd).html("actions");
+          }
+        }
       ],
+
       "dom": "<'row'<'col-sm-24 col-md-12'l><'col-sm-24 col-md-12'f>>" + "<'row'<'table-responsive'<'col-sm-24'tr>>>" + "<'row'<'col-sm-24 col-md-10'i><'col-sm-24 col-md-14'p>>"
     });
     $('.lab_table').DataTable({

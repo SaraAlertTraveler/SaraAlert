@@ -37,6 +37,7 @@ Rails.application.routes.draw do
   get '/patients/sms_eligibility_check', to: 'patients#sms_eligibility_check'
 
   resources :patients, only: [:index, :new, :create, :show, :edit, :update]
+  get '/patients/:id/assessments_data', to: 'patients#assessments_data'
 
   resources :admin, only: [:index]
   get 'admin/users', to: 'admin#users'

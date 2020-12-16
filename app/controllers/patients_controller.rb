@@ -547,6 +547,85 @@ class PatientsController < ApplicationController
     diffs
   end
 
+  def assessments_data
+    # TODO: add guard based on user role
+    @patient = current_user.get_patient(params.permit(:id)[:id])
+
+    render json: get_assessments_table_data(params, @patient.assessments.order('created_at'))
+  end
+
+  def get_assessments_table_data(params, data)
+    # Filter on search
+    filtered = filter_assessments_table_data(params, data)
+
+    # Sort on columns
+    sorted = sort_assessments_table_data(params, filtered)
+
+    # Paginate
+    paginated_data = paginate_assessments_table_data(params, sorted)
+
+    # Format
+    format_assessments_table_data(params, paginated_data, sorted)
+  end
+
+
+  # TODO: finish and test
+  def filter_assessments_table_data(params, data)
+    search = params[:search][:value] unless params[:search].nil?
+    if search.present?
+      data.where('id like ?', "#{search}%").or(
+          data.where('who_reported like ?', "#{search}%")
+      )
+    else
+      data
+    end
+  end
+
+  # TODO: finish and test
+  def sort_assessments_table_data(params, data)
+    return data if params[:order].nil?
+
+    sorted = data
+    params[:order].each do |_num, val|
+      next if params[:columns].nil? || val.nil? || val['column'].blank? || params[:columns][val['column']].nil?
+      next if params[:columns][val['column']][:name].blank?
+
+      direction = val['dir'] == 'asc' ? :asc : :desc
+      if params[:columns][val['column']][:name] == 'id' # Name
+        sorted = sorted.order(id: direction)
+      end
+    end
+    sorted
+  end
+
+  def paginate_assessments_table_data(params, data)
+    length = params[:length].to_i
+    page = params[:start].to_i.zero? ? 1 : (params[:start].to_i / length) + 1
+    data.paginate(per_page: length, page: page)
+  end
+
+  def format_assessments_table_data(params, paginated_data, data)
+    table_data = []
+    paginated_data.each do |assessment|
+      details = {
+        id: assessment[:id],
+        symptomatic: assessment.symptomatic ? "Yes" : "No",
+        who_reported: assessment.who_reported,
+        created_at: assessment.created_at,
+      }
+
+      columns = Assessment.get_symptom_names_for_assessments(@patient.assessments.pluck(:id)).uniq.sort
+      columns.each do |symptom_name|
+        reported_condition = assessment.get_reported_symptom_by_name(symptom_name)
+        value = reported_condition&.value
+        value = value == true ? "Yes" : "No" if reported_condition&.type == "BoolSymptom"
+        details[symptom_name.to_sym] = value.blank? ? '' : value
+      end
+      table_data << details
+    end
+    { data: table_data, draw: params[:draw].to_i, recordsTotal: data.size, recordsFiltered: data.size }
+  end
+
   # Parameters allowed for saving to database
   def allowed_params
     params.require(:patient).permit(
