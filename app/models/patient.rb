@@ -895,11 +895,11 @@ class Patient < ApplicationRecord
 
   def address_timezone_offset
     if monitored_address_state.present?
-      timezone_for_state(monitored_address_state)
+      time_zone_offset_for_state(monitored_address_state)
     elsif address_state.present?
-      timezone_for_state(address_state)
+      time_zone_offset_for_state(address_state)
     else
-      timezone_for_state('massachusetts')
+      time_zone_offset_for_state('massachusetts')
     end
   end
 

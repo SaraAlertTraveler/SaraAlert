@@ -2086,5 +2086,11 @@ class PatientTest < ActiveSupport::TestCase
     scoped_patients = Patient.seven_day_quarantine_candidates(DateTime.now.utc)
     assert_not scoped_patients.where(id: patient.id).present?
   end
+
+  test 'timezone offset' do
+    patient = create(:patient)
+    # Timezone defaults to Eastern
+    assert_equal(patient.timezone_offset, '-4')
+  end
 end
 # rubocop:enable Metrics/ClassLength
