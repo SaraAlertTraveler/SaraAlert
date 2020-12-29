@@ -97,6 +97,10 @@ class Patient < ApplicationRecord
   has_many :close_contacts
   has_many :contact_attempts
 
+  before_update :set_time_zone, 
+    if: Proc.new { |patient| patient.monitored_address_state_changed? || patient.address_state_changed? }
+  before_create :set_time_zone
+
   around_save :inform_responder, if: :responder_id_changed?
   around_destroy :inform_responder
 
@@ -900,6 +904,16 @@ class Patient < ApplicationRecord
       time_zone_offset_for_state(address_state)
     else
       time_zone_offset_for_state('massachusetts')
+    end
+  end
+
+  def set_time_zone
+    if monitored_address_state.present?
+      self.time_zone = time_zone_for_state(monitored_address_state)
+    elsif address_state.present?
+      self.time_zone = time_zone_for_state(address_state)
+    else
+      self.time_zone = time_zone_for_state('massachusetts')
     end
   end
 

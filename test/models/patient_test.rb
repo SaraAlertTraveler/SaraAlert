@@ -2090,7 +2090,19 @@ class PatientTest < ActiveSupport::TestCase
   test 'timezone offset' do
     patient = create(:patient)
     # Timezone defaults to Eastern
-    assert_equal(patient.timezone_offset, '-4')
+    assert_equal('America/New_York', patient.time_zone)
+    # Should set on update on monitored_address_state
+    patient.update(monitored_address_state: 'minnesota')
+    patient.reload
+    assert_equal('America/Chicago', patient.time_zone)
+    # Should set on update on address_state
+    patient.update(monitored_address_state: nil, address_state: 'montana')
+    patient.reload
+    assert_equal('America/Denver', patient.time_zone)
+    # should default back to Eastern
+    patient.update(monitored_address_state: nil, address_state: nil)
+    patient.reload
+    assert_equal('America/New_York', patient.time_zone)
   end
 end
 # rubocop:enable Metrics/ClassLength
