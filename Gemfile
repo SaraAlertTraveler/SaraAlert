@@ -131,6 +131,7 @@ group :test do
   gem 'selenium-webdriver'
   gem 'simplecov'
   gem 'simplecov-lcov'
+  gem 'timecop'
   gem 'webdrivers'
 end
 
