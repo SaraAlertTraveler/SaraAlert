@@ -152,6 +152,33 @@ class Patient < ApplicationRecord
       .distinct
   }
 
+  scope :within_preferred_contact_time, lambda {
+    where(
+      # If preferred contact time is X,
+      # then valid contact hours in patient's timezone are Y.
+      # 'Morning'   => 0800 - 1200
+      # 'Afternoon' => 1200 - 1600
+      # 'Evening'   => 1600 - 1900
+      #  default    => 1100 - 1700
+      '(patients.preferred_contact_time = "Morning"'\
+      ' && HOUR(CONVERT_TZ(?, "UTC", patients.time_zone)) >= 8'\
+      ' && HOUR(CONVERT_TZ(?, "UTC", patients.time_zone)) <= 11) '\
+      'OR (patients.preferred_contact_time = "Afternoon"'\
+      ' && HOUR(CONVERT_TZ(?, "UTC", patients.time_zone)) >= 12'\
+      ' && HOUR(CONVERT_TZ(?, "UTC", patients.time_zone)) <= 15) '\
+      'OR (patients.preferred_contact_time = "Evening"'\
+      ' && HOUR(CONVERT_TZ(?, "UTC", patients.time_zone)) >= 16'\
+      ' && HOUR(CONVERT_TZ(?, "UTC", patients.time_zone)) <= 18) '\
+      'OR (patients.preferred_contact_time IS NULL'\
+      ' && HOUR(CONVERT_TZ(?, "UTC", patients.time_zone)) >= 11'\
+      ' && HOUR(CONVERT_TZ(?, "UTC", patients.time_zone)) <= 16)',
+      Time.now.getlocal('-00:00'), Time.now.getlocal('-00:00'),
+      Time.now.getlocal('-00:00'), Time.now.getlocal('-00:00'),
+      Time.now.getlocal('-00:00'), Time.now.getlocal('-00:00'),
+      Time.now.getlocal('-00:00'), Time.now.getlocal('-00:00')
+    )
+  }
+
   # All individuals currently being monitored
   scope :monitoring_open, lambda {
     where(monitoring: true)

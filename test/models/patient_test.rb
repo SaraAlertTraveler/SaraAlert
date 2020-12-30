@@ -2104,5 +2104,114 @@ class PatientTest < ActiveSupport::TestCase
     patient.reload
     assert_equal('America/New_York', patient.time_zone)
   end
+
+  test 'within_preferred_contact_time scope' do
+    patient = create(:patient)
+    [
+      { monitored_address_state: nil, address_state: nil },
+      { monitored_address_state: 'minnesota', address_state: nil },
+      { monitored_address_state: nil, address_state: 'minnesota' },
+      { monitored_address_state: 'montana', address_state: nil },
+      { monitored_address_state: nil, address_state: 'florida' }
+    ].each do |state_params|
+      patient.update(state_params)
+      patient.update(preferred_contact_time: nil)
+      patient.reload
+
+      # default time window is 1100 - 1600
+      # before window
+      Timecop.freeze(Time.now.getlocal(patient.address_timezone_offset).change(hour: 9)) do
+        assert Patient.within_preferred_contact_time.find_by(id: patient.id).nil?
+      end
+      # front edge of window
+      Timecop.freeze(Time.now.getlocal(patient.address_timezone_offset).change(hour: 11)) do
+        assert_not Patient.within_preferred_contact_time.find_by(id: patient.id).nil?
+      end
+      # middle of window
+      Timecop.freeze(Time.now.getlocal(patient.address_timezone_offset).change(hour: 13)) do
+        assert_not Patient.within_preferred_contact_time.find_by(id: patient.id).nil?
+      end
+      # back edge of window
+      Timecop.freeze(Time.now.getlocal(patient.address_timezone_offset).change(hour: 16)) do
+        assert_not Patient.within_preferred_contact_time.find_by(id: patient.id).nil?
+      end
+      # after window
+      Timecop.freeze(Time.now.getlocal(patient.address_timezone_offset).change(hour: 22)) do
+        assert Patient.within_preferred_contact_time.find_by(id: patient.id).nil?
+      end
+
+      # morning time window is 0800 - 1100
+      patient.update(preferred_contact_time: 'Morning')
+      patient.reload
+      # before window
+      Timecop.freeze(Time.now.getlocal(patient.address_timezone_offset).change(hour: 7)) do
+        assert Patient.within_preferred_contact_time.find_by(id: patient.id).nil?
+      end
+      # front edge of window
+      Timecop.freeze(Time.now.getlocal(patient.address_timezone_offset).change(hour: 8)) do
+        assert_not Patient.within_preferred_contact_time.find_by(id: patient.id).nil?
+      end
+      # middle of window
+      Timecop.freeze(Time.now.getlocal(patient.address_timezone_offset).change(hour: 10)) do
+        assert_not Patient.within_preferred_contact_time.find_by(id: patient.id).nil?
+      end
+      # back edge of window
+      Timecop.freeze(Time.now.getlocal(patient.address_timezone_offset).change(hour: 11)) do
+        assert_not Patient.within_preferred_contact_time.find_by(id: patient.id).nil?
+      end
+      # after window
+      Timecop.freeze(Time.now.getlocal(patient.address_timezone_offset).change(hour: 22)) do
+        assert Patient.within_preferred_contact_time.find_by(id: patient.id).nil?
+      end
+
+      # afternoon time window is 1200 - 1500
+      patient.update(preferred_contact_time: 'Afternoon')
+      patient.reload
+      # before window
+      Timecop.freeze(Time.now.getlocal(patient.address_timezone_offset).change(hour: 10)) do
+        assert Patient.within_preferred_contact_time.find_by(id: patient.id).nil?
+      end
+      # front edge of window
+      Timecop.freeze(Time.now.getlocal(patient.address_timezone_offset).change(hour: 12)) do
+        assert_not Patient.within_preferred_contact_time.find_by(id: patient.id).nil?
+      end
+      # middle of window
+      Timecop.freeze(Time.now.getlocal(patient.address_timezone_offset).change(hour: 13)) do
+        assert_not Patient.within_preferred_contact_time.find_by(id: patient.id).nil?
+      end
+      # back edge of window
+      Timecop.freeze(Time.now.getlocal(patient.address_timezone_offset).change(hour: 15)) do
+        assert_not Patient.within_preferred_contact_time.find_by(id: patient.id).nil?
+      end
+      # after window
+      Timecop.freeze(Time.now.getlocal(patient.address_timezone_offset).change(hour: 22)) do
+        assert Patient.within_preferred_contact_time.find_by(id: patient.id).nil?
+      end
+
+      # evening time window is 1600 - 1800
+      patient.update(preferred_contact_time: 'Evening')
+      patient.reload
+      # before window
+      Timecop.freeze(Time.now.getlocal(patient.address_timezone_offset).change(hour: 15)) do
+        assert Patient.within_preferred_contact_time.find_by(id: patient.id).nil?
+      end
+      # front edge of window
+      Timecop.freeze(Time.now.getlocal(patient.address_timezone_offset).change(hour: 16)) do
+        assert_not Patient.within_preferred_contact_time.find_by(id: patient.id).nil?
+      end
+      # middle of window
+      Timecop.freeze(Time.now.getlocal(patient.address_timezone_offset).change(hour: 17)) do
+        assert_not Patient.within_preferred_contact_time.find_by(id: patient.id).nil?
+      end
+      # back edge of window
+      Timecop.freeze(Time.now.getlocal(patient.address_timezone_offset).change(hour: 18)) do
+        assert_not Patient.within_preferred_contact_time.find_by(id: patient.id).nil?
+      end
+      # after window
+      Timecop.freeze(Time.now.getlocal(patient.address_timezone_offset).change(hour: 22)) do
+        assert Patient.within_preferred_contact_time.find_by(id: patient.id).nil?
+      end
+    end
+  end
 end
 # rubocop:enable Metrics/ClassLength
