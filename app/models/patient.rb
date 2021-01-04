@@ -97,8 +97,9 @@ class Patient < ApplicationRecord
   has_many :close_contacts
   has_many :contact_attempts
 
-  before_update :set_time_zone, 
-    if: Proc.new { |patient| patient.monitored_address_state_changed? || patient.address_state_changed? }
+  before_update :set_time_zone, if: proc { |patient|
+    patient.monitored_address_state_changed? || patient.address_state_changed?
+  }
   before_create :set_time_zone
 
   around_save :inform_responder, if: :responder_id_changed?
@@ -935,13 +936,13 @@ class Patient < ApplicationRecord
   end
 
   def set_time_zone
-    if monitored_address_state.present?
-      self.time_zone = time_zone_for_state(monitored_address_state)
-    elsif address_state.present?
-      self.time_zone = time_zone_for_state(address_state)
-    else
-      self.time_zone = time_zone_for_state('massachusetts')
-    end
+    self.time_zone = if monitored_address_state.present?
+                       time_zone_for_state(monitored_address_state)
+                     elsif address_state.present?
+                       time_zone_for_state(address_state)
+                     else
+                       time_zone_for_state('massachusetts')
+                     end
   end
 
   # Creates a diff between a patient before and after updates, and creates a detailed record edit History item with the changes.

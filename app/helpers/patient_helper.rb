@@ -69,6 +69,7 @@ module PatientHelper # rubocop:todo Metrics/ModuleLength
   end
 
   # Offsets are DST
+  # rubocop:disable Metrics/MethodLength
   def states_with_time_zone_data
     {
       'alabama' => {
@@ -378,6 +379,7 @@ module PatientHelper # rubocop:todo Metrics/ModuleLength
       }
     }
   end
+  # rubocop:enable Metrics/MethodLength
 
   def normalize_state_names(pat)
     pat.monitored_address_state = normalize_and_get_state_name(pat.monitored_address_state) || pat.monitored_address_state
