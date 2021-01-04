@@ -1,10 +1,11 @@
 # frozen_string_literal: true
 
-include PatientHelper
 require 'test_case'
 
 # rubocop:disable Metrics/ClassLength
 class PatientTest < ActiveSupport::TestCase
+  include PatientHelper
+
   def setup
     @default_purgeable_after = ADMIN_OPTIONS['purgeable_after']
     @default_weekly_purge_warning_date = ADMIN_OPTIONS['weekly_purge_warning_date']
@@ -2216,7 +2217,7 @@ class PatientTest < ActiveSupport::TestCase
   end
 
   test 'Time zone comparisons work as expected' do
-    # NOTE: You CANNOT compare using two DATETIME in different timezones. 
+    # NOTE: You CANNOT compare using two DATETIME in different timezones.
     #       DATETIME MUST be converted to the same timezone.
     [
       "SELECT '2021-01-04 19:00:00' < CONVERT_TZ('2021-01-04 19:00:01', 'UTC', 'UTC')",
@@ -2261,12 +2262,12 @@ class PatientTest < ActiveSupport::TestCase
 
   test 'SQL timezone conversion equals rails timezone conversion' do
     patient = patient = create(:patient)
-    PatientHelper.state_names.keys.each do |state|
+    state_names.each_key do |state|
       patient.update(monitored_address_state: state)
       patient.reload
 
       rails_local_time = patient.curr_date_in_timezone
-      rails_utc_time = rails_local_time.getlocal("+00:00")
+      rails_utc_time = rails_local_time.getlocal('+00:00')
       query = ActiveRecord::Base.connection.raw_connection.prepare("SELECT CONVERT_TZ(?, 'UTC', ?);")
       sql_time = query.execute(rails_utc_time, patient.time_zone).first[0]
       assert_equal sql_time.strftime('%Y-%m-%d %H:%M:%S'), rails_local_time.strftime('%Y-%m-%d %H:%M:%S')
