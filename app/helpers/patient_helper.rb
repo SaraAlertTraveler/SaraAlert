@@ -300,7 +300,7 @@ module PatientHelper # rubocop:todo Metrics/ModuleLength
       'puertorico' => {
         offset: -4,
         observes_dst: false,
-        time_zone: 'America/Puerto_Rico'
+        zone_name: 'America/Puerto_Rico'
       },
       'rhodeisland' => {
         offset: -4,
