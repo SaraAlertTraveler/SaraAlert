@@ -398,7 +398,7 @@ class PatientsController < ApplicationController
 
     # NOTE: We use updates rather than all updates here because we want to determine what History
     # messages are needed based on the original changes
-    patient.update_patient_monitoring_history(updates, patient_before, history_data)
+    patient.update_patient_monitoring_history(updates, patient_before, history_data, diff_state)
   end
 
   def clear_assessments

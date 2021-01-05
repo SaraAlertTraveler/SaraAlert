@@ -106,6 +106,7 @@ class Fhir::R4::ApiController < ActionController::API
       patient = get_patient(params.permit(:id)[:id])
       status_forbidden && return if patient.nil?
 
+      # Get the contents from applying a patch, if needed
       if request.patch? && !patient.nil?
         begin
           contents = apply_patch(patient, patch)
@@ -167,7 +168,7 @@ class Fhir::R4::ApiController < ActionController::API
       household_status: :patient,
       propagation: :none
     }
-    patient.update_patient_monitoring_history(updates, patient_before, history_data)
+    patient.update_patient_monitoring_history(updates, patient_before, history_data, nil)
   end
 
   # Create a resource given a type.

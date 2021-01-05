@@ -960,7 +960,7 @@ class Patient < ApplicationRecord
         end
       when :case_status
         # If Case Status has been updated to one of the values meant for the Exposure workflow, reset the Public Health Action.
-        if ['Suspect', 'Unknown', 'Not a Case'].include?(new_attribute_value) && patient[:public_health_action] != 'None'
+        if ['Suspect', 'Unknown', 'Not a Case'].include?(new_attribute_value) && public_health_action != 'None'
           all_updates[:public_health_action] = 'None'
         end
       when :symptom_onset
@@ -978,7 +978,7 @@ class Patient < ApplicationRecord
     all_updates
   end
 
-  def update_patient_monitoring_history(all_updates, patient_before, history_data)
+  def update_patient_monitoring_history(all_updates, patient_before, history_data, diff_state)
     all_updates&.keys&.each do |attribute|
       updated_value = self[attribute]
       next if patient_before[attribute] == self[attribute]
@@ -1044,9 +1044,9 @@ class Patient < ApplicationRecord
         History.symptom_onset(history_data)
       when :case_status
         History.case_status(history_data, diff_state)
-
+        
         # If Case Status was updated to one of the values meant for the Exposure workflow and the Public Health Action was reset.
-        if ['Suspect', 'Unknown', 'Not a Case'].include?(new_attribute_value) && patient_before[:public_health_action] != 'None' && public_health_action == 'None'
+        if ['Suspect', 'Unknown', 'Not a Case'].include?(updated_value) && patient_before[:public_health_action] != 'None' && public_health_action == 'None'
           message = monitoring ?
           "System changed Latest Public Health Action from \"#{public_health_action}\" to \"None\" so that the monitoree will appear on
           the appropriate line list in the exposure workflow to continue monitoring." : "System changed Latest Public Health Action
