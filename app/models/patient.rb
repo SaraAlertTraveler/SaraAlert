@@ -971,7 +971,7 @@ class Patient < ApplicationRecord
         end
       when :continuous_exposure
         # Do not allow continuous exposure to be set for records that are closed
-        all_updates.delete(:continuous_exposure) if all_updates[:continuous_exposure] && !all_updates[:monitoring].nil? && !all_updates[:monitoring]
+        all_updates.delete(:continuous_exposure) if all_updates[:continuous_exposure] && !monitoring
       end
     end
 
@@ -1044,13 +1044,13 @@ class Patient < ApplicationRecord
         History.symptom_onset(history_data)
       when :case_status
         History.case_status(history_data, diff_state)
-        
+
         # If Case Status was updated to one of the values meant for the Exposure workflow and the Public Health Action was reset.
         if ['Suspect', 'Unknown', 'Not a Case'].include?(updated_value) && patient_before[:public_health_action] != 'None' && public_health_action == 'None'
           message = monitoring ?
-          "System changed Latest Public Health Action from \"#{public_health_action}\" to \"None\" so that the monitoree will appear on
+          "System changed Latest Public Health Action from \"#{patient_before[:public_health_action]}\" to \"None\" so that the monitoree will appear on
           the appropriate line list in the exposure workflow to continue monitoring." : "System changed Latest Public Health Action
-          from \"#{public_health_action}\" to \"None\"."
+          from \"#{patient_before[:public_health_action]}\" to \"None\"."
           History.monitoring_change(patient: self, created_by: 'Sara Alert System', comment: message)
         end
       when :jurisdiction_id
