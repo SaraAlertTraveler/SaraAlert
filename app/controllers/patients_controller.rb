@@ -19,6 +19,9 @@ class PatientsController < ApplicationController
     # If we failed to find a subject given the id, redirect to index
     redirect_to(root_url) && return if @patient.nil?
 
+    @laboratories = @patient.laboratories.order(:created_at)
+    @close_contacts = @patient.close_contacts.order(:created_at)
+
     @possible_jurisdiction_paths = if current_user.can_transfer_patients?
                                      # Allow all jurisdictions as valid transfer options.
                                      Hash[Jurisdiction.all.where.not(name: 'USA').pluck(:id, :path).map { |id, path| [id, path] }]
@@ -102,11 +105,11 @@ class PatientsController < ApplicationController
 
     # Check for potential duplicate
     unless params[:bypass_duplicate]
-      duplicate_data = current_user.viewable_patients.duplicate_data(params[:patient].permit(*allowed_params)[:first_name],
-                                                                     params[:patient].permit(*allowed_params)[:last_name],
-                                                                     params[:patient].permit(*allowed_params)[:sex],
-                                                                     params[:patient].permit(*allowed_params)[:date_of_birth],
-                                                                     params[:patient].permit(*allowed_params)[:user_defined_id_statelocal])
+      duplicate_data = current_user.viewable_patients.duplicate_data(allowed_params[:first_name],
+                                                                     allowed_params[:last_name],
+                                                                     allowed_params[:sex],
+                                                                     allowed_params[:date_of_birth],
+                                                                     allowed_params[:user_defined_id_statelocal])
 
       render(json: duplicate_data) && return if duplicate_data[:is_duplicate]
     end

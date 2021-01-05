@@ -2,6 +2,8 @@
 
 # Assessment: assessment model
 class Assessment < ApplicationRecord
+  extend OrderAsSpecified
+
   columns.each do |column|
     case column.type
     when :text
@@ -91,11 +93,13 @@ class Assessment < ApplicationRecord
     reported_condition&.symptoms&.find_by(name: symptom_name)
   end
 
-  # Gets all symptom names for a given array of assessment IDs.
-  def self.get_symptom_names_for_assessments(assessment_ids)
-    threshold_cond_hashes = ReportedCondition.where(type: 'ReportedCondition', assessment_id: assessment_ids).pluck(:threshold_condition_hash)
+  # Gets all unique symptoms (based on name) for a given array of assessment IDs.
+  def self.get_unique_symptoms_for_assessments(assessment_ids)
+    threshold_cond_hashes = ReportedCondition.where(type: 'ReportedCondition', assessment_id: assessment_ids)&.pluck(:threshold_condition_hash)
+    return if threshold_cond_hashes.nil?
+
     condition_ids = ThresholdCondition.where(type: 'ThresholdCondition', threshold_condition_hash: threshold_cond_hashes)
-    Symptom.where(condition_id: condition_ids).pluck(:name)
+    Symptom.where(condition_id: condition_ids)&.uniq(&:name)
   end
 
   def translations

@@ -137,12 +137,19 @@ class ConsumeAssessmentsJob < ApplicationJob
           typed_reported_symptoms = Condition.build_symptoms(message['reported_symptoms_array'])
           reported_condition = ReportedCondition.new(symptoms: typed_reported_symptoms, threshold_condition_hash: message['threshold_condition_hash'])
           assessment = Assessment.new(reported_condition: reported_condition, patient: patient, who_reported: 'Monitoree')
-          reported_condition.transaction do
-            reported_condition.save!
-            assessment.symptomatic = assessment.symptomatic?
-            assessment.save!
-            queue.commit
+          begin
+            reported_condition.transaction do
+              reported_condition.save!
+              assessment.symptomatic = assessment.symptomatic?
+              assessment.save!
+            end
+          rescue ActiveRecord::RecordInvalid => e
+            Rails.logger.info(
+              "AssessmentsController: Unable to save assessment due to validation error for patient ID: #{patient.id}. " \
+              "Error: #{e}"
+            )
           end
+          queue.commit
         else
           # If message['reported_symptoms_array'] is not populated then this assessment came in through
           # a generic channel ie: SMS where monitorees are asked YES/NO if they are experiencing symptoms
@@ -163,12 +170,19 @@ class ConsumeAssessmentsJob < ApplicationJob
             # that they reported for themselves, else we are creating an assessment for the dependent and
             # that means that it was the proxy who reported for them
             assessment.who_reported = patient.submission_token == dependent.submission_token ? 'Monitoree' : 'Proxy'
-            reported_condition.transaction do
-              reported_condition.save!
-              assessment.symptomatic = assessment.symptomatic? || message['experiencing_symptoms']
-              assessment.save!
-              queue.commit
+            begin
+              reported_condition.transaction do
+                reported_condition.save!
+                assessment.symptomatic = assessment.symptomatic? || message['experiencing_symptoms']
+                assessment.save!
+              end
+            rescue ActiveRecord::RecordInvalid => e
+              Rails.logger.info(
+                "AssessmentsController: Unable to save assessment due to validation error for patient ID: #{dependent.id}. " \
+                "Error: #{e}"
+              )
             end
+            queue.commit
           end
         end
       rescue JSON::ParserError
@@ -191,7 +205,12 @@ class ConsumeAssessmentsJob < ApplicationJob
     # therefore the patient.submission_token will not be available. We get the responder associated with the opt_in
     # or opt_out phone number by requesting the phone number who sent the message in the associated flow execution id
     phone_numbers = TwilioSender.get_phone_numbers_from_flow_execution(message['patient_submission_token'])
-    return if phone_numbers.nil?
+    if phone_numbers.nil?
+      Rails.logger.info(
+        "ConsumeAssessmentsJob: failure fetching number for opt-in/opt-out message (message response status: #{message['response_status']})"
+      )
+      return
+    end
 
     monitoree_number = Phonelib.parse(phone_numbers[:monitoree_number], 'US').full_e164
     sara_number = phone_numbers[:sara_number]

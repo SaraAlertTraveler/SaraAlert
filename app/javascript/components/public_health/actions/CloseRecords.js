@@ -16,6 +16,7 @@ class CloseRecords extends React.Component {
       monitoring_reasons: [
         'Completed Monitoring',
         'Meets criteria to shorten quarantine',
+        'Does not meet criteria for monitoring',
         'Meets Case Definition',
         'Lost to follow-up during monitoring period',
         'Lost to follow-up (contact never established)',
@@ -92,7 +93,7 @@ class CloseRecords extends React.Component {
           </Form.Group>
           <Form.Group>
             <Form.Label>Please include any additional details:</Form.Label>
-            <Form.Control as="textarea" rows="2" id="reasoning" onChange={this.handleChange} />
+            <Form.Control as="textarea" rows="2" id="reasoning" onChange={this.handleChange} aria-label="Additional Details Text Area" />
           </Form.Group>
           <Form.Group className="my-2">
             <Form.Check

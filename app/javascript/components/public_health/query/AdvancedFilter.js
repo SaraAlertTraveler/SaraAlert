@@ -585,7 +585,7 @@ class AdvancedFilter extends React.Component {
     // Relative dates all get a specific tooltip
     // NOTE: Right now because of how this is set up, relative dates can't have a tooltip in addition to the one that is shown
     // here once "more" is selected.
-    if (filter.title.includes('(Relative Date)')) {
+    if (filter.type === 'relative') {
       statement = this.getRelativeTooltipString(filter, value);
     } else {
       // Otherwise base it on specific filter option
@@ -673,6 +673,7 @@ class AdvancedFilter extends React.Component {
               <ButtonGroup toggle>
                 <ToggleButton
                   type="checkbox"
+                  aria-label="Advanced Filter Boolean True"
                   variant="outline-primary"
                   checked={value}
                   value="1"
@@ -683,6 +684,7 @@ class AdvancedFilter extends React.Component {
                 </ToggleButton>
                 <ToggleButton
                   type="checkbox"
+                  aria-label="Advanced Filter Boolean False"
                   variant="outline-primary"
                   checked={!value}
                   value="0"
@@ -864,7 +866,7 @@ class AdvancedFilter extends React.Component {
                         onChange={event => this.changeValue(index, { number: event.target.value, unit: value.unit, when: value.when })}
                       />
                     </Col>
-                    <Col md="5" className="pr-0">
+                    <Col md="6" className="pr-0">
                       <Form.Control
                         as="select"
                         value={value.unit}
@@ -875,9 +877,6 @@ class AdvancedFilter extends React.Component {
                         <option value="weeks">week(s)</option>
                         <option value="months">month(s)</option>
                       </Form.Control>
-                    </Col>
-                    <Col md="2" className="text-center my-auto">
-                      {this.renderOptionTooltip(filterOption, value, index)}
                     </Col>
                   </React.Fragment>
                 )}
@@ -896,7 +895,7 @@ class AdvancedFilter extends React.Component {
               </Form.Group>
             )}
           </Col>
-          {filterOption && filterOption.tooltip && filterOption.type !== 'relative' && (
+          {filterOption && (filterOption.tooltip || relativeOption === 'custom') && (
             <span className="align-middle mx-2">{this.renderOptionTooltip(filterOption, value, index)}</span>
           )}
           <Col className="py-0" md={2}>

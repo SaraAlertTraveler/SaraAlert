@@ -2,7 +2,32 @@
 
 # AssessmentsController: for assessment actions
 class AssessmentsController < ApplicationController
-  def index; end
+  include AssessmentQueryHelper
+
+  def index
+    redirect_to(root_url) if ADMIN_OPTIONS['report_mode']
+    redirect_to(root_url) && return unless current_user&.can_view_patient_assessments?
+
+    permitted_params = params.permit(:entries, :page, :search, :order, :direction)
+
+    patient_id = params.require(:patient_id)
+    search_text = permitted_params[:search]
+    sort_order = permitted_params[:order]
+    sort_direction = permitted_params[:direction]
+    entries = permitted_params[:entries]&.to_i
+    page = permitted_params[:page]&.to_i
+
+    patient = current_user.get_patient(patient_id)
+    assessments = patient&.assessments
+    redirect_to(root_url) && return if patient.nil? || assessments.nil?
+
+    assessments = search(assessments, search_text)
+    assessments = sort(assessments, sort_order, sort_direction)
+    assessments = paginate(assessments, entries, page)
+    assessments = format(assessments)
+
+    render json: assessments
+  end
 
   def new
     permitted_params = params.permit(:patient_submission_token, :unique_identifier, :lang, :initials_age)
@@ -101,6 +126,8 @@ class AssessmentsController < ApplicationController
       redirect_to(root_url) && return unless patient
 
       threshold_condition_hash = params.permit(:threshold_hash)[:threshold_hash]
+      redirect_to(root_url) && return if threshold_condition_hash.blank?
+
       threshold_condition = ThresholdCondition.find_by(threshold_condition_hash: threshold_condition_hash)
       redirect_to(root_url) && return unless threshold_condition
 
@@ -117,21 +144,28 @@ class AssessmentsController < ApplicationController
       # Determine if a user created this assessment or a monitoree
       @assessment.who_reported = current_user.nil? ? 'Monitoree' : current_user.email
 
-      reported_condition.transaction do
-        reported_condition.save!
+      begin
+        reported_condition.transaction do
+          reported_condition.save!
 
-        @assessment.symptomatic = @assessment.symptomatic?
-        @assessment.save!
-
-        # Save a new receipt and clear out any older ones
-        AssessmentReceipt.where(submission_token: submission_token_from_params).delete_all
-        @assessment_receipt = AssessmentReceipt.new(submission_token: submission_token_from_params)
-        @assessment_receipt.save
-
-        # Create history if assessment was created by user
-        History.report_created(patient: patient, created_by: current_user.email, comment: "User created a new report (ID: #{@assessment.id}).") if current_user
+          @assessment.symptomatic = @assessment.symptomatic?
+          @assessment.save!
+        end
+      rescue ActiveRecord::RecordInvalid => e
+        Rails.logger.info(
+          "AssessmentsController: Unable to save assessment due to validation error for patient ID: #{patient.id}. " \
+          "Error: #{e}"
+        )
+        return render json: { error: 'Assessment was unable to be saved.' }, status: :bad_request
       end
-      redirect_to(patient_assessments_url)
+
+      # Save a new receipt and clear out any older ones
+      AssessmentReceipt.where(submission_token: submission_token_from_params).delete_all
+      @assessment_receipt = AssessmentReceipt.new(submission_token: submission_token_from_params)
+      @assessment_receipt.save
+
+      # Create history if assessment was created by user
+      History.report_created(patient: patient, created_by: current_user.email, comment: "User created a new report (ID: #{@assessment.id}).") if current_user
     end
   end
 
@@ -172,7 +206,6 @@ class AssessmentsController < ApplicationController
     comment = 'User updated an existing report (ID: ' + assessment.id.to_s + ').'
     comment += ' Symptom updates: ' + delta.join(', ') + '.' unless delta.empty?
     History.report_updated(patient: patient, created_by: current_user.email, comment: comment)
-    redirect_to(patient_assessments_url) && return
   end
 
   # For report mode instances, this is the default landing

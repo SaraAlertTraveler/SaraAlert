@@ -369,39 +369,46 @@ class PatientsTable extends React.Component {
     }
   }
 
-  linkPatient = (name, id, isHoH) => {
+  linkPatient = data => {
+    const name = data.value;
+    const rowData = data.rowData;
     if (this.state.query.tab === 'transferred_out') {
       return name;
     }
-    if (isHoH) {
+    if (rowData.is_hoh) {
       return (
         <div>
-          <BadgeHOH patientId={id} customClass={'badge-hoh ml-1'} location={'right'} />
-          <a href={`/patients/${id}`}>{name}</a>
+          <BadgeHOH patientId={rowData.id.toString()} customClass={'badge-hoh ml-1'} location={'right'} />
+          <a href={`/patients/${rowData.id}`}>{name}</a>
         </div>
       );
     }
-    return <a href={`/patients/${id}`}>{name}</a>;
+    return <a href={`/patients/${rowData.id}`}>{name}</a>;
   };
 
-  formatTimestamp(timestamp) {
+  formatTimestamp(data) {
+    const timestamp = data.value;
     const ts = moment.tz(timestamp, 'UTC');
     return ts.isValid() ? ts.tz(moment.tz.guess()).format('MM/DD/YYYY HH:mm z') : '';
   }
 
-  formatDate(date) {
+  formatDate(data) {
+    const date = data.value;
     return date ? moment(date, 'YYYY-MM-DD').format('MM/DD/YYYY') : '';
   }
 
-  formatEndOfMonitoring(endOfMonitoring) {
+  formatEndOfMonitoring(data) {
+    const endOfMonitoring = data.value;
     if (endOfMonitoring === 'Continuous Exposure') {
       return 'Continuous Exposure';
     }
     return moment(endOfMonitoring, 'YYYY-MM-DD').format('MM/DD/YYYY');
   }
 
-  createEligibilityTooltip(reportEligibility, patientId) {
-    return <EligibilityTooltip id={patientId} report_eligibility={reportEligibility} inline={false} />;
+  createEligibilityTooltip(data) {
+    const reportEligibility = data.value;
+    const rowData = data.rowData;
+    return <EligibilityTooltip id={rowData.id.toString()} report_eligibility={reportEligibility} inline={false} />;
   }
 
   render() {

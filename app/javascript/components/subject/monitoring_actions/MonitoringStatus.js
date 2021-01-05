@@ -139,6 +139,7 @@ class MonitoringStatus extends React.Component {
                 </option>
                 <option>Completed Monitoring</option>
                 <option>Meets criteria to shorten quarantine</option>
+                <option>Does not meet criteria for monitoring</option>
                 <option>Meets Case Definition</option>
                 <option>Lost to follow-up during monitoring period</option>
                 <option>Lost to follow-up (contact never established)</option>
@@ -154,7 +155,7 @@ class MonitoringStatus extends React.Component {
           )}
           <Form.Group>
             <Form.Label>Please include any additional details:</Form.Label>
-            <Form.Control as="textarea" rows="2" id="reasoning" onChange={this.handleChange} />
+            <Form.Control as="textarea" rows="2" id="reasoning" onChange={this.handleChange} aria-label="Additional Details Text Area" />
           </Form.Group>
           {this.props.patient.isolation && !this.state.monitoring && this.props.in_household_with_member_with_ce_in_exposure && !this.state.apply_to_household && (
             <div className="update-dependent-lde">

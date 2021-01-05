@@ -698,7 +698,7 @@ module ImportExport # rubocop:todo Metrics/ModuleLength
       conditions = ReportedCondition.where(assessment_id: assessments.pluck(:id))
       symptoms = Symptom.where(condition_id: conditions&.pluck(:id)).order(:label)
 
-      conditions_hash = Hash[conditions.pluck(:id, :assessment_id).map { |id, assessment_id| [id, assessment_id] }]
+      conditions_hash = Hash[conditions&.pluck(:id, :assessment_id)&.map { |id, assessment_id| [id, assessment_id] }]
                         .transform_values { |assessment_id| { assessment_id: assessment_id, symptoms: {} } }
       symptoms&.each do |symptom|
         conditions_hash[symptom[:condition_id]][:symptoms][symptom[:name]] = symptom.value
@@ -710,9 +710,12 @@ module ImportExport # rubocop:todo Metrics/ModuleLength
 
     assessments_details = []
     assessments.each do |assessment|
-      assessment_details = assessment.custom_details(fields, patients_identifiers[assessment.patient_id])
+      assessment_details = assessment.custom_details(fields, patients_identifiers[assessment.patient_id]) || {}
       if fields.include?(:symptoms)
         symptom_names_and_labels&.map(&:first)&.each do |symptom_name|
+          # Nil check in case for some reason there were assessments with nil ReportedCondition
+          next if assessments_hash[assessment[:id]].nil?
+
           assessment_details[symptom_name.to_sym] = assessments_hash[assessment[:id]][symptom_name]
         end
       end

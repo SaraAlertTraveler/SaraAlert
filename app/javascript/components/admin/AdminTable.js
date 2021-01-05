@@ -56,11 +56,12 @@ class AdminTable extends React.Component {
 
   /**
    * Creates a "Audit" button for each row of the table.
-   * @param {string} userId
+   * @param {Object} rowData - Data about the cell this filter is called on.
    */
-  createAuditButton(_, userId) {
+  createAuditButton(data) {
+    const rowData = data.rowData;
     return (
-      <div id={userId} className="float-left edit-button">
+      <div id={rowData.id} className="float-left edit-button">
         <i className="fas fa-user-clock"></i>
       </div>
     );
@@ -404,7 +405,7 @@ class AdminTable extends React.Component {
   };
 
   /**
-   * Called when the number of entries to be shown on a page changes.
+   * Called when the number of entries to be shown on a page changes. Resets page to 0.
    * Updates state and then calls table update handler.
    * @param {SyntheticEvent} event - Event when num entries changes
    */
@@ -413,7 +414,7 @@ class AdminTable extends React.Component {
     this.setState(
       state => {
         return {
-          query: { ...state.query, entries: value },
+          query: { ...state.query, entries: value, page: 0 },
         };
       },
       () => {
@@ -600,6 +601,7 @@ class AdminTable extends React.Component {
   render() {
     return (
       <div className="mx-2">
+        <h1 className="sr-only">Admin Dashboard</h1>
         <div className="d-flex justify-content-between mb-2">
           <div className="mb-1">
             <Button className="mr-1" size="md" onClick={this.handleAddUserClick}>
@@ -628,7 +630,15 @@ class AdminTable extends React.Component {
                   </InputGroup.Text>
                 </OverlayTrigger>
               </InputGroup.Prepend>
-              <Form.Control id="search-input" autoComplete="off" size="md" name="search" value={this.state.query.search} onChange={this.handleSearchChange} />
+              <Form.Control
+                id="search-input"
+                autoComplete="off"
+                size="md"
+                name="search"
+                value={this.state.query.search}
+                onChange={this.handleSearchChange}
+                aria-label="Search"
+              />
               <DropdownButton
                 size="md"
                 variant="primary"
@@ -639,12 +649,10 @@ class AdminTable extends React.Component {
                 }
                 className="ml-3"
                 disabled={!this.state.actionsEnabled}>
-                {this.state.query.tab !== 'closed' && (
-                  <Dropdown.Item className="px-3" onClick={this.handleResetPasswordClick}>
-                    <i className="fas fa-undo"></i>
-                    <span className="ml-2">Reset Password</span>
-                  </Dropdown.Item>
-                )}
+                <Dropdown.Item className="px-3" onClick={this.handleResetPasswordClick}>
+                  <i className="fas fa-undo"></i>
+                  <span className="ml-2">Reset Password</span>
+                </Dropdown.Item>
                 <Dropdown.Item className="px-3" onClick={this.handleReset2FAClick}>
                   <i className="fas fa-key"></i>
                   <span className="ml-2">Reset 2FA</span>

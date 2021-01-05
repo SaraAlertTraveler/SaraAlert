@@ -103,9 +103,10 @@ class AuditModal extends React.Component {
 
   /**
    * Formats values in the timestamp column to be human readable
-   * @param {String} timestamp
+   * @param {Object} data - Data about the cell this filter is called on.
    */
-  formatTimestamp(timestamp) {
+  formatTimestamp(data) {
+    const timestamp = data.value;
     const ts = moment.tz(timestamp, 'UTC');
     return ts.isValid() ? ts.tz(moment.tz.guess()).format('MM/DD/YYYY HH:mm z') : '';
   }
@@ -126,9 +127,11 @@ class AuditModal extends React.Component {
 
   /**
    * Formatting method for displaying each audit action in the table.
-   * @param {Object} change - audit to display holding the updated element ({String} name) and the before & after values ({Array} details)
+   * @param {Object} data - Data about the cell this filter is called on.
    */
-  formatChange = change => {
+  formatChange = data => {
+    //Audit to display holding the updated element ({String} name) and the before & after values ({Array} details)
+    const change = data.value;
     switch (change.name) {
       case 'locked_at':
         // Generic audit message in case before & after values not provided
@@ -264,7 +267,7 @@ class AuditModal extends React.Component {
   };
 
   /**
-   * Called when the number of entries to be shown on a page changes.
+   * Called when the number of entries to be shown on a page changes. Resets page to be 0.
    * Updates state and then calls table update handler.
    * @param {SyntheticEvent} event - Event when num entries changes
    */
@@ -273,7 +276,7 @@ class AuditModal extends React.Component {
     this.setState(
       state => {
         return {
-          query: { ...state.query, entries: value },
+          query: { ...state.query, entries: value, page: 0 },
         };
       },
       () => {
