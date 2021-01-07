@@ -966,6 +966,10 @@ class Patient < ApplicationRecord
       when :continuous_exposure
         # Do not allow continuous exposure to be set for records that are closed
         all_updates.delete(:continuous_exposure) if all_updates[:continuous_exposure] && !monitoring
+      when :jurisdiction_id
+        # Do not allow jurisdiction to be set if it does not exist
+        jur = Jurisdiction.find_by_id(new_attribute_value)
+        all_updates.delete(:jurisdiction_id) if jur.nil?
       end
     end
 
