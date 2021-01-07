@@ -2146,6 +2146,10 @@ class PatientTest < ActiveSupport::TestCase
     patient.update(monitored_address_state: nil, address_state: 'montana')
     patient.reload
     assert_equal('America/Denver', patient.time_zone)
+    # monitored should take precendence over normal address
+    patient.update(monitored_address_state: 'minnesota')
+    patient.reload
+    assert_equal('America/Chicago', patient.time_zone)
     # should default back to Eastern
     patient.update(monitored_address_state: nil, address_state: nil)
     patient.reload
