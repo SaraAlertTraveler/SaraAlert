@@ -383,7 +383,7 @@ class PatientsController < ApplicationController
 
     # If the jurisdiction was changed, create a Transfer
     if all_updates&.keys&.include?(:jurisdiction_id) && !all_updates[:jurisdiction_id].nil?
-      Transfer.create(patient: patient, from_jurisdiction: patient_before.jurisdiction, to_jurisdiction: patient.jurisdiction, who: @current_actor)
+      Transfer.create(patient: patient, from_jurisdiction: patient_before.jurisdiction, to_jurisdiction: patient.jurisdiction, who: current_user)
     end
 
     # Handle creating history items based on the updates
