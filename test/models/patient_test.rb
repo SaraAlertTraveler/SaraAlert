@@ -2156,6 +2156,23 @@ class PatientTest < ActiveSupport::TestCase
     assert_equal('America/New_York', patient.time_zone)
   end
 
+  test 'within preferred contact time scope utc' do
+    patient = create(:patient, monitored_address_state: 'florida', preferred_contact_time: nil)
+    # Production system will run in UTC
+    # Before window
+    Timecop.freeze((Time.now.utc).change(hour: 13)) do
+      assert_nil Patient.within_preferred_contact_time.find_by(id: patient.id)
+    end
+    # During window
+    Timecop.freeze((Time.now.utc).change(hour: 17)) do
+      assert_not_nil Patient.within_preferred_contact_time.find_by(id: patient.id)
+    end
+    # After window
+    Timecop.freeze((Time.now.utc).change(hour: 23)) do
+      assert_nil Patient.within_preferred_contact_time.find_by(id: patient.id)
+    end
+  end
+
   test 'within_preferred_contact_time scope' do
     patient = create(:patient)
     [
