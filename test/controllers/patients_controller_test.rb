@@ -240,7 +240,7 @@ class PatientsControllerTest < ActionController::TestCase
   test 'update status for a patient with no dependents' do
     user = create(:public_health_enroller_user)
     sign_in user
-    patient = create(:patient, creator: user, monitoring: true)
+    patient = create(:patient, creator: user, monitoring: true, continuous_exposure: true)
 
     post :update_status, params: {
       id: patient.id,

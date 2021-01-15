@@ -233,6 +233,9 @@ class PatientsController < ApplicationController
     # Update patient history with detailed edit diff
     patient_before = patient.dup
     Patient.detailed_history_edit(patient_before, patient, allowed_params&.keys, current_user.email) if patient.update(content)
+
+    # Add a history update for any changes from moving from isolation to exposure
+    patient.update_patient_history_for_isolation(patient_before, content[:isolation]) if !content[:isolation].nil?
     
     render json: patient
   end
@@ -383,7 +386,7 @@ class PatientsController < ApplicationController
       reason: params[:reasoning]
     }
 
-    Patient.monitoring_history_edit(history_data, diff_state)
+    patient.monitoring_history_edit(history_data, diff_state)
   end
 
   def clear_assessments

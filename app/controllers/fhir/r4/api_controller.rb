@@ -163,7 +163,7 @@ class Fhir::R4::ApiController < ActionController::API
       household_status: :patient,
       propagation: :none
     }
-    Patient.monitoring_history_edit(history_data, nil)
+    patient.monitoring_history_edit(history_data, nil)
   end
 
   # Create a resource given a type.
