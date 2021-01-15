@@ -1017,10 +1017,10 @@ class Patient < ApplicationRecord
     end
   end
 
-  def update_patient_monitoring_history(all_updates, patient_before, history_data, diff_state)
-    all_updates&.keys&.each do |attribute|
-      updated_value = self[attribute]
-      next if patient_before[attribute] == self[attribute]
+  def self.monitoring_history_edit(history_data, diff_state)
+    history_data[:updates]&.keys&.each do |attribute|
+      updated_value = history_data[:patient][attribute]
+      next if history_data[:patient_before][attribute] == updated_value
 
       case attribute
       when :monitoring

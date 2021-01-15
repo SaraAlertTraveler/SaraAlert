@@ -364,8 +364,6 @@ class PatientsController < ApplicationController
 
     patient_before = patient.dup
 
-    # Get any additional updates that may need to occur based on initial changes
-
     # Apply and save updates to the db
     patient.update(updates)
 
@@ -385,9 +383,7 @@ class PatientsController < ApplicationController
       reason: params[:reasoning]
     }
 
-    # NOTE: We use updates rather than all updates here because we want to determine what History
-    # messages are needed based on the original changes
-    patient.update_patient_monitoring_history(updates, patient_before, history_data, diff_state)
+    Patient.monitoring_history_edit(history_data, diff_state)
   end
 
   def clear_assessments

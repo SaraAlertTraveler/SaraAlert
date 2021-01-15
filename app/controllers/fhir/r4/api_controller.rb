@@ -122,8 +122,6 @@ class Fhir::R4::ApiController < ActionController::API
       request_updates = patient_from_fhir(contents, default_patient_jurisdiction_id)
       status_unprocessable_entity && return if request_updates.nil?
 
-      # Get any additional updates that may need to occur based on initial changes
-
       # Assign any remaining updates to the patient
       # NOTE: The patient.update method does not allow a context to be passed, so first we assign the updates, then save
       patient.assign_attributes(request_updates)
@@ -137,8 +135,6 @@ class Fhir::R4::ApiController < ActionController::API
       end
 
       # Handle creating history items based on all of the updates
-      # NOTE: We use updates rather than all updates here because we want to determine what History
-      # messages are needed based on the original changes
       update_all_patient_history(request_updates, patient_before, patient)
 
       status_ok(patient.as_fhir) && return
@@ -167,7 +163,7 @@ class Fhir::R4::ApiController < ActionController::API
       household_status: :patient,
       propagation: :none
     }
-    patient.update_patient_monitoring_history(updates, patient_before, history_data, nil)
+    Patient.monitoring_history_edit(history_data, nil)
   end
 
   # Create a resource given a type.
