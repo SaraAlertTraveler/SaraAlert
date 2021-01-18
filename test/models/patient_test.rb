@@ -2188,5 +2188,153 @@ class PatientTest < ActiveSupport::TestCase
     # This update is not allowed when monitoring is false
     assert_not patient.continuous_exposure
   end
+
+  # monitoring_history_edit tests
+  test 'monitoring_history_edit handles monitoring change' do
+    patient = create(:patient, monitoring: false, continuous_exposure: false)
+    history_data = {
+      patient_before: { monitoring: true, continuous_exposure: true },
+      updates: { monitoring: false },
+      patient: patient
+    }
+    patient.monitoring_history_edit(history_data, nil)
+    h = History.where(patient: patient)
+    assert_match /Continuous Exposure/, h.find_by(created_by: 'Sara Alert System').comment
+    assert_match /"Monitoring" to "Not Monitoring"/, h.find_by(history_type: 'Monitoring Change').comment
+  end
+
+  test 'monitoring_history_edit handles exposure_risk_assessment change' do
+    patient = create(:patient, exposure_risk_assessment: 'Low')
+    history_data = {
+      patient_before: { exposure_risk_assessment: 'High' },
+      updates: { exposure_risk_assessment: 'Low' },
+      patient: patient
+    }
+    patient.monitoring_history_edit(history_data, nil)
+    h = History.where(patient: patient).first
+    assert_match /Exposure Risk Assessment.*"High".*"Low"/, h.comment
+  end
+
+  test 'monitoring_history_edit handles monitoring_plan change' do
+    patient = create(:patient, monitoring_plan: 'None')
+    history_data = {
+      patient_before: { monitoring_plan: 'Daily active monitoring' },
+      updates: { monitoring_plan: 'None' },
+      patient: patient
+    }
+    patient.monitoring_history_edit(history_data, nil)
+    h = History.where(patient: patient).first
+    assert_match /Monitoring Plan.*"Daily active monitoring".*"None"/, h.comment
+  end
+
+  test 'monitoring_history_edit handles public_health_action change' do
+    patient = create(:patient, public_health_action: 'None')
+    history_data = {
+      patient_before: { public_health_action: 'Recommended laboratory testing' },
+      updates: { public_health_action: 'None' },
+      patient: patient
+    }
+    patient.monitoring_history_edit(history_data, nil)
+    h = History.where(patient: patient).first
+    assert_match /Latest Public Health Action.*"Recommended laboratory testing".*"None"/, h.comment
+  end
+
+  test 'monitoring_history_edit handles assigned_user change' do
+    patient = create(:patient, assigned_user: 2)
+    history_data = {
+      patient_before: { assigned_user: 1 },
+      updates: { assigned_user: 2 },
+      patient: patient
+    }
+    patient.monitoring_history_edit(history_data, nil)
+    h = History.where(patient: patient).first
+    assert_match /Assigned User.*"1".*"2"/, h.comment
+  end
+
+  test 'monitoring_history_edit handles pause_notifications change' do
+    patient = create(:patient, pause_notifications: false)
+    history_data = {
+      patient_before: { pause_notifications: true },
+      updates: { pause_notifications: false },
+      patient: patient
+    }
+    patient.monitoring_history_edit(history_data, nil)
+    h = History.where(patient: patient).first
+    assert_match /resumed notifications/, h.comment
+  end
+
+  test 'monitoring_history_edit handles last_date_of_exposure change' do
+    patient = create(:patient, last_date_of_exposure: 7.days.ago.utc.to_date)
+    history_data = {
+      patient_before: { last_date_of_exposure: 6.days.ago.utc.to_date },
+      updates: { last_date_of_exposure: 7.days.ago.utc.to_date },
+      patient: patient
+    }
+    patient.monitoring_history_edit(history_data, nil)
+    h = History.where(patient: patient).first
+    assert_match /Last Date of Exposure/, h.comment
+  end
+
+  test 'monitoring_history_edit handles continuous_exposure change' do
+    patient = create(:patient, continuous_exposure: false)
+    history_data = {
+      patient_before: { continuous_exposure: true},
+      updates: { continuous_exposure: false },
+      patient: patient
+    }
+    patient.monitoring_history_edit(history_data, nil)
+    h = History.where(patient: patient).first
+    assert_match /Continuous Exposure/, h.comment
+  end
+
+  test 'monitoring_history_edit handles isolation change' do
+    patient = create(:patient, isolation: false, extended_isolation: nil, symptom_onset: 6.days.ago.utc.to_date)
+    history_data = {
+      patient_before: { isolation: true, extended_isolation: 2.days.from_now.utc.to_date, symptom_onset: 6.days.ago.utc.to_date },
+      updates: { isolation: false },
+      patient: patient
+    }
+    patient.monitoring_history_edit(history_data, nil)
+    h = History.where(patient: patient)
+    assert_match /cleared Extended Isolation Date/, h.first.comment
+    assert_match /changed Symptom Onset Date/, h.second.comment
+  end
+
+  test 'monitoring_history_edit handles symptom_onset change' do
+    patient = create(:patient, symptom_onset: 6.days.ago.utc.to_date)
+    history_data = {
+      patient_before: { symptom_onset: 7.days.ago.utc.to_date},
+      updates: { symptom_onset: 6.days.ago.utc.to_date },
+      patient: patient
+    }
+    patient.monitoring_history_edit(history_data, nil)
+    h = History.where(patient: patient).first
+    assert_match /Symptom Onset/, h.comment
+  end
+
+  test 'monitoring_history_edit handles case_status change' do
+    patient = create(:patient, case_status: 'Unknown', public_health_action: 'None')
+    history_data = {
+      patient_before: { case_status: 'Confirmed', public_health_action: 'Recommended laboratory testing' },
+      updates: { case_status: 'Unknown' },
+      patient: patient
+    }
+    patient.monitoring_history_edit(history_data, nil)
+    h = History.where(patient: patient)
+    assert_match /Case Status.*"Confirmed".*"Unknown"/, h.first.comment
+    assert_match /Latest Public Health Action.*"Recommended laboratory testing".*"None"/, h.second.comment
+  end
+
+  test 'monitoring_history_edit handles jurisdiction_id change' do
+    patient = create(:patient, jurisdiction_id: 2)
+    history_data = {
+      patient_before: { jurisdiction_id: 1 },
+      updates: { jurisdiction_id: 2 },
+      patient: patient
+    }
+    patient.monitoring_history_edit(history_data, nil)
+    h = History.where(patient: patient).first
+    assert_match /Jurisdiction/, h.comment
+  end
 end
 # rubocop:enable Metrics/ClassLength

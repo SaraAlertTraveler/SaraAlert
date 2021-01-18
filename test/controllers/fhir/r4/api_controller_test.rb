@@ -197,7 +197,8 @@ class ApiControllerTest < ActionDispatch::IntegrationTest
       primary_telephone_type: 'Plain Cell',
       secondary_telephone_type: 'Landline',
       black_or_african_american: true,
-      asian: true
+      asian: true,
+      continuous_exposure: true
     )
     @patient_2 = Patient.find_by(id: 2).as_fhir
 
@@ -946,6 +947,23 @@ class ApiControllerTest < ActionDispatch::IntegrationTest
     assert_equal patient.travel_related_notes, fhir_ext_str(json_response, 'travel-related-notes')
     assert_equal patient.additional_planned_travel_related_notes, fhir_ext_str(json_response, 'additional-planned-travel-notes')
     assert_equal patient.user_defined_id_statelocal, json_response['identifier'].find { |i| i['system'].include? 'state-local-id' }['value']
+  end
+
+  test 'should create History items when updating patient' do
+    patient = @patient_2
+    patient.active = false
+    resource_path = "/fhir/r4/Patient/#{patient.id}"
+    put(
+      resource_path,
+      params: patient.to_json,
+      headers: { 'Authorization': "Bearer #{@system_patient_token_rw.token}", 'Content-Type': 'application/fhir+json' }
+    )
+    assert_response :ok
+    json_response = JSON.parse(response.body)
+    assert_equal false, json_response['active']
+    histories = History.where(patient: patient.id)
+    assert_match /Continuous Exposure/, histories.find_by(created_by: 'Sara Alert System').comment
+    assert_match /"Monitoring" to "Not Monitoring"/, histories.find_by(history_type: 'Monitoring Change').comment
   end
 
   test 'should update Patient via update and set omitted fields to nil ' do
