@@ -945,39 +945,36 @@ class Patient < ApplicationRecord
   end
 
   def monitoring_change
-    unless monitoring
-      self.closed_at = DateTime.now
-      self.continuous_exposure = false
-    end
+    return if monitoring
+
+    self.closed_at = DateTime.now
+    self.continuous_exposure = false
   end
 
   def isolation_change
-    unless isolation
-      self.extended_isolation = nil
-      # NOTE: The below will overwrite any new value they may set for symptom onset as they can not be set in the exposure workflow.
-      self.user_defined_symptom_onset = false
-      self.symptom_onset = calculated_symptom_onset
-    end
+    return if isolation
+
+    self.extended_isolation = nil
+    # NOTE: The below will overwrite any new value they may set for symptom onset as they can not be set in the exposure workflow.
+    self.user_defined_symptom_onset = false
+    self.symptom_onset = calculated_symptom_onset
   end
 
   def case_status_change
-    if ['Suspect', 'Unknown', 'Not a Case'].include?(case_status) && public_health_action != 'None'
-      old_action = public_health_action
-      self.public_health_action = 'None'
-    end
+    return unless ['Suspect', 'Unknown', 'Not a Case'].include?(case_status) && public_health_action != 'None'
+
+    self.public_health_action = 'None'
   end
 
   def symptom_onset_change
-    if symptom_onset.nil?
-      self.user_defined_symptom_onset = false
-      self.symptom_onset = calculated_symptom_onset
-    end
+    return unless symptom_onset.nil?
+
+    self.user_defined_symptom_onset = false
+    self.symptom_onset = calculated_symptom_onset
   end
 
   def continuous_exposure_change
-    if continuous_exposure && !monitoring
-      self.continuous_exposure = false
-    end
+    self.continuous_exposure = false if continuous_exposure && !monitoring
   end
 
   def monitoring_history_edit(history_data, diff_state)
@@ -1036,34 +1033,34 @@ class Patient < ApplicationRecord
   end
 
   def update_patient_history_for_isolation(patient_before, new_isolation_value)
-    unless new_isolation_value
-      # If moved from Isolation workflow to Exposure workflow and Extended Isolation was cleared
-      if !patient_before[:extended_isolation].nil? && extended_isolation.nil?
-        History.monitoring_change(
-          patient: self,
-          created_by: 'Sara Alert System',
-          comment: 'System cleared Extended Isolation Date because monitoree was moved from isolation to exposure workflow.'
-        )
-      end
+    return if new_isolation_value
 
-      # If moved from Isolation worklflow to Exposure and symptom onset had to be cleared
-      if patient_before[:symptom_onset].nil? != symptom_onset
-        comment = if !patient_before[:symptom_onset].nil? && !symptom_onset.nil?
-                    "System changed Symptom Onset Date from #{patient_before[:symptom_onset].strftime('%m/%d/%Y')} to #{symptom_onset.strftime('%m/%d/%Y')}
-                    because monitoree was moved from isolation to exposure workflow. This allows the system to show monitoree on appropriate line list based on
-                    daily reports."
-                  elsif patient_before[:symptom_onset].nil? && !symptom_onset.nil?
-                    "System changed Symptom Onset Date from blank to #{symptom_onset.strftime('%m/%d/%Y')} because monitoree was moved from isolation to
-                    exposure workflow. This allows the system to show monitoree on appropriate line list based on daily reports."
-                  elsif !patient_before[:symptom_onset].nil? && symptom_onset.nil?
-                    "System cleared Symptom Onset Date from #{patient_before[:symptom_onset].strftime('%m/%d/%Y')} to blank because monitoree was moved from isolation to
-                    exposure workflow. This allows the system to show monitoree on appropriate line list based on daily reports."
-                  else
-                    'System changed Symptom Onset Date. This allows the system to show monitoree on appropriate line list based on daily reports.'
-                  end
-        History.monitoring_change(patient: self, created_by: 'Sara Alert System', comment: comment)
-      end
+    # If moved from Isolation workflow to Exposure workflow and Extended Isolation was cleared
+    if !patient_before[:extended_isolation].nil? && extended_isolation.nil?
+      History.monitoring_change(
+        patient: self,
+        created_by: 'Sara Alert System',
+        comment: 'System cleared Extended Isolation Date because monitoree was moved from isolation to exposure workflow.'
+      )
     end
+
+    # If moved from Isolation worklflow to Exposure and symptom onset had to be cleared
+    return unless patient_before[:symptom_onset].nil? != symptom_onset
+
+    comment = if !patient_before[:symptom_onset].nil? && !symptom_onset.nil?
+                "System changed Symptom Onset Date from #{patient_before[:symptom_onset].strftime('%m/%d/%Y')} to #{symptom_onset.strftime('%m/%d/%Y')}
+                because monitoree was moved from isolation to exposure workflow. This allows the system to show monitoree on appropriate line list based on
+                daily reports."
+              elsif patient_before[:symptom_onset].nil? && !symptom_onset.nil?
+                "System changed Symptom Onset Date from blank to #{symptom_onset.strftime('%m/%d/%Y')} because monitoree was moved from isolation to
+                exposure workflow. This allows the system to show monitoree on appropriate line list based on daily reports."
+              elsif !patient_before[:symptom_onset].nil? && symptom_onset.nil?
+                "System cleared Symptom Onset Date from #{patient_before[:symptom_onset].strftime('%m/%d/%Y')} to blank because monitoree was moved from
+                isolation to exposure workflow. This allows the system to show monitoree on appropriate line list based on daily reports."
+              else
+                'System changed Symptom Onset Date. This allows the system to show monitoree on appropriate line list based on daily reports.'
+              end
+    History.monitoring_change(patient: self, created_by: 'Sara Alert System', comment: comment)
   end
 end
 # rubocop:enable Metrics/ClassLength

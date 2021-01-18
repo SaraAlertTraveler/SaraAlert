@@ -115,7 +115,7 @@ class Fhir::R4::ApiController < ActionController::API
         end
       end
 
-      # Get patient values before updates occur for later comparison 
+      # Get patient values before updates occur for later comparison
       patient_before = patient.dup
 
       # Get key value pairs from the update.
@@ -129,6 +129,7 @@ class Fhir::R4::ApiController < ActionController::API
       unless jurisdiction_valid_for_update?(patient) && patient.save(context: :api)
         status_unprocessable_entity(format_model_validation_errors(patient)) && return
       end
+
       # If the jurisdiction was changed, create a Transfer
       if request_updates&.keys&.include?(:jurisdiction_id) && !request_updates[:jurisdiction_id].nil?
         Transfer.create(patient: patient, from_jurisdiction: patient_before.jurisdiction, to_jurisdiction: patient.jurisdiction, who: @current_actor)
@@ -538,12 +539,11 @@ class Fhir::R4::ApiController < ActionController::API
   end
 
   def jurisdiction_valid_for_update?(patient)
-    allowed_jurisdiction_ids = @current_actor.get_jurisdictions_for_transfer
-    if !patient.jurisdiction_id.nil? && allowed_jurisdiction_ids&.keys.include?(patient.jurisdiction_id)
-      return true
-    else
-      patient.errors.add(:jurisdiction_id, "Jurisdiction does not exist or cannot be transferred to")
-    end
+    allowed_jurisdiction_ids = @current_actor.jurisdictions_for_transfer
+    return true if !patient.jurisdiction_id.nil? && allowed_jurisdiction_ids.keys.include?(patient.jurisdiction_id)
+
+    patient.errors.add(:jurisdiction_id, 'Jurisdiction does not exist or cannot be transferred to')
+
     false
   end
 

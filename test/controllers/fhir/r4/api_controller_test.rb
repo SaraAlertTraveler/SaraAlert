@@ -962,8 +962,8 @@ class ApiControllerTest < ActionDispatch::IntegrationTest
     json_response = JSON.parse(response.body)
     assert_equal false, json_response['active']
     histories = History.where(patient: patient.id)
-    assert_match /Continuous Exposure/, histories.find_by(created_by: 'Sara Alert System').comment
-    assert_match /"Monitoring" to "Not Monitoring"/, histories.find_by(history_type: 'Monitoring Change').comment
+    assert_match(/Continuous Exposure/, histories.find_by(created_by: 'Sara Alert System').comment)
+    assert_match(/"Monitoring" to "Not Monitoring"/, histories.find_by(history_type: 'Monitoring Change').comment)
   end
 
   test 'should update Patient via update and set omitted fields to nil ' do
@@ -1141,7 +1141,7 @@ class ApiControllerTest < ActionDispatch::IntegrationTest
     )
     assert_response :success
     json_response = JSON.parse(response.body)
-    assert_equal 'USA, State 2', json_response['extension'].filter { |e| e['url'].include? 'full-assigned-jurisdiction-path'}.first['valueString']
+    assert_equal 'USA, State 2', json_response['extension'].filter { |e| e['url'].include? 'full-assigned-jurisdiction-path' }.first['valueString']
     t = Transfer.find_by(patient_id: @patient_1.id)
     assert_equal Jurisdiction.find_by(path: 'USA, State 1').id, t.from_jurisdiction_id
     assert_equal Jurisdiction.find_by(path: 'USA, State 2').id, t.to_jurisdiction_id
@@ -1157,7 +1157,7 @@ class ApiControllerTest < ActionDispatch::IntegrationTest
     )
     assert_response :success
     json_response = JSON.parse(response.body)
-    assert_equal 'USA, State 2', json_response['extension'].filter { |e| e['url'].include? 'full-assigned-jurisdiction-path'}.first['valueString']
+    assert_equal 'USA, State 2', json_response['extension'].filter { |e| e['url'].include? 'full-assigned-jurisdiction-path' }.first['valueString']
     t = Transfer.find_by(patient_id: @patient_1.id)
     assert_equal Jurisdiction.find_by(path: 'USA, State 1').id, t.from_jurisdiction_id
     assert_equal Jurisdiction.find_by(path: 'USA, State 2').id, t.to_jurisdiction_id

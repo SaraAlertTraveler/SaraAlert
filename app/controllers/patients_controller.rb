@@ -22,7 +22,7 @@ class PatientsController < ApplicationController
     @laboratories = @patient.laboratories.order(:created_at)
     @close_contacts = @patient.close_contacts.order(:created_at)
 
-    @possible_jurisdiction_paths = current_user.get_jurisdictions_for_transfer
+    @possible_jurisdiction_paths = current_user.jurisdictions_for_transfer
 
     # Household members (dependents) for the HOH excluding HOH
     @dependents_exclude_hoh = @patient.dependents_exclude_self.where(purged: false)
@@ -235,8 +235,8 @@ class PatientsController < ApplicationController
     Patient.detailed_history_edit(patient_before, patient, allowed_params&.keys, current_user.email) if patient.update(content)
 
     # Add a history update for any changes from moving from isolation to exposure
-    patient.update_patient_history_for_isolation(patient_before, content[:isolation]) if !content[:isolation].nil?
-    
+    patient.update_patient_history_for_isolation(patient_before, content[:isolation]) unless content[:isolation].nil?
+
     render json: patient
   end
 
@@ -315,7 +315,8 @@ class PatientsController < ApplicationController
     patients = current_user.get_patients(patient_ids)
 
     patients.each do |patient|
-      update_monitoring_fields(patient, params, non_dependent_patient_ids.include?(patient[:id]) ? :patient : :dependent, params[:apply_to_household] ? :group : :none)
+      update_monitoring_fields(patient, params, non_dependent_patient_ids.include?(patient[:id]) ? :patient : :dependent,
+                               params[:apply_to_household] ? :group : :none)
     end
   end
 

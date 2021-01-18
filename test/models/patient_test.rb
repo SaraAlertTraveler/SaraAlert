@@ -2142,10 +2142,10 @@ class PatientTest < ActiveSupport::TestCase
     patient.update(last_assessment_reminder_sent: 11.hours.ago)
     assert_not patient.last_assessment_reminder_sent_eligible?
   end
-  
+
   test 'update handles monitoring change' do
     patient = create(:patient, continuous_exposure: true, monitoring: true, closed_at: nil)
-    assert patient.update({monitoring: false})
+    assert patient.update({ monitoring: false })
     assert_not patient.monitoring
     assert_not patient.continuous_exposure
     assert_not_nil patient.closed_at
@@ -2159,7 +2159,7 @@ class PatientTest < ActiveSupport::TestCase
                      symptom_onset: DateTime.now - 1.day)
     created_at = DateTime.now.to_date - 1.day
     create(:assessment, patient_id: patient.id, symptomatic: true, created_at: created_at)
-    patient.update({isolation: false})
+    patient.update({ isolation: false })
     assert_not patient.isolation
     assert_nil patient.extended_isolation
     assert_not patient.user_defined_symptom_onset
@@ -2168,7 +2168,7 @@ class PatientTest < ActiveSupport::TestCase
 
   test 'update handles case_status change' do
     patient = create(:patient, public_health_action: 'Recommended medical evaluation of symptoms')
-    patient.update({case_status: 'Unknown'})
+    patient.update({ case_status: 'Unknown' })
     assert_equal 'Unknown', patient.case_status
     assert_equal 'None', patient.public_health_action
   end
@@ -2177,14 +2177,14 @@ class PatientTest < ActiveSupport::TestCase
     patient = create(:patient, symptom_onset: DateTime.now - 1.day)
     created_at = DateTime.now.to_date - 2.day
     create(:assessment, patient_id: patient.id, symptomatic: true, created_at: created_at)
-    patient.update({symptom_onset: nil})
+    patient.update({ symptom_onset: nil })
     assert_equal created_at, patient.symptom_onset
     assert_not patient.user_defined_symptom_onset
   end
 
   test 'update handles continuous_exposure change' do
     patient = create(:patient, monitoring: false, continuous_exposure: false)
-    patient.update({continuous_exposure: true})
+    patient.update({ continuous_exposure: true })
     # This update is not allowed when monitoring is false
     assert_not patient.continuous_exposure
   end
@@ -2199,8 +2199,8 @@ class PatientTest < ActiveSupport::TestCase
     }
     patient.monitoring_history_edit(history_data, nil)
     h = History.where(patient: patient)
-    assert_match /Continuous Exposure/, h.find_by(created_by: 'Sara Alert System').comment
-    assert_match /"Monitoring" to "Not Monitoring"/, h.find_by(history_type: 'Monitoring Change').comment
+    assert_match(/Continuous Exposure/, h.find_by(created_by: 'Sara Alert System').comment)
+    assert_match(/"Monitoring" to "Not Monitoring"/, h.find_by(history_type: 'Monitoring Change').comment)
   end
 
   test 'monitoring_history_edit handles exposure_risk_assessment change' do
@@ -2212,7 +2212,7 @@ class PatientTest < ActiveSupport::TestCase
     }
     patient.monitoring_history_edit(history_data, nil)
     h = History.where(patient: patient).first
-    assert_match /Exposure Risk Assessment.*"High".*"Low"/, h.comment
+    assert_match(/Exposure Risk Assessment.*"High".*"Low"/, h.comment)
   end
 
   test 'monitoring_history_edit handles monitoring_plan change' do
@@ -2224,7 +2224,7 @@ class PatientTest < ActiveSupport::TestCase
     }
     patient.monitoring_history_edit(history_data, nil)
     h = History.where(patient: patient).first
-    assert_match /Monitoring Plan.*"Daily active monitoring".*"None"/, h.comment
+    assert_match(/Monitoring Plan.*"Daily active monitoring".*"None"/, h.comment)
   end
 
   test 'monitoring_history_edit handles public_health_action change' do
@@ -2236,7 +2236,7 @@ class PatientTest < ActiveSupport::TestCase
     }
     patient.monitoring_history_edit(history_data, nil)
     h = History.where(patient: patient).first
-    assert_match /Latest Public Health Action.*"Recommended laboratory testing".*"None"/, h.comment
+    assert_match(/Latest Public Health Action.*"Recommended laboratory testing".*"None"/, h.comment)
   end
 
   test 'monitoring_history_edit handles assigned_user change' do
@@ -2248,7 +2248,7 @@ class PatientTest < ActiveSupport::TestCase
     }
     patient.monitoring_history_edit(history_data, nil)
     h = History.where(patient: patient).first
-    assert_match /Assigned User.*"1".*"2"/, h.comment
+    assert_match(/Assigned User.*"1".*"2"/, h.comment)
   end
 
   test 'monitoring_history_edit handles pause_notifications change' do
@@ -2260,7 +2260,7 @@ class PatientTest < ActiveSupport::TestCase
     }
     patient.monitoring_history_edit(history_data, nil)
     h = History.where(patient: patient).first
-    assert_match /resumed notifications/, h.comment
+    assert_match(/resumed notifications/, h.comment)
   end
 
   test 'monitoring_history_edit handles last_date_of_exposure change' do
@@ -2272,19 +2272,19 @@ class PatientTest < ActiveSupport::TestCase
     }
     patient.monitoring_history_edit(history_data, nil)
     h = History.where(patient: patient).first
-    assert_match /Last Date of Exposure/, h.comment
+    assert_match(/Last Date of Exposure/, h.comment)
   end
 
   test 'monitoring_history_edit handles continuous_exposure change' do
     patient = create(:patient, continuous_exposure: false)
     history_data = {
-      patient_before: { continuous_exposure: true},
+      patient_before: { continuous_exposure: true },
       updates: { continuous_exposure: false },
       patient: patient
     }
     patient.monitoring_history_edit(history_data, nil)
     h = History.where(patient: patient).first
-    assert_match /Continuous Exposure/, h.comment
+    assert_match(/Continuous Exposure/, h.comment)
   end
 
   test 'monitoring_history_edit handles isolation change' do
@@ -2296,20 +2296,20 @@ class PatientTest < ActiveSupport::TestCase
     }
     patient.monitoring_history_edit(history_data, nil)
     h = History.where(patient: patient)
-    assert_match /cleared Extended Isolation Date/, h.first.comment
-    assert_match /changed Symptom Onset Date/, h.second.comment
+    assert_match(/cleared Extended Isolation Date/, h.first.comment)
+    assert_match(/changed Symptom Onset Date/, h.second.comment)
   end
 
   test 'monitoring_history_edit handles symptom_onset change' do
     patient = create(:patient, symptom_onset: 6.days.ago.utc.to_date)
     history_data = {
-      patient_before: { symptom_onset: 7.days.ago.utc.to_date},
+      patient_before: { symptom_onset: 7.days.ago.utc.to_date },
       updates: { symptom_onset: 6.days.ago.utc.to_date },
       patient: patient
     }
     patient.monitoring_history_edit(history_data, nil)
     h = History.where(patient: patient).first
-    assert_match /Symptom Onset/, h.comment
+    assert_match(/Symptom Onset/, h.comment)
   end
 
   test 'monitoring_history_edit handles case_status change' do
@@ -2321,8 +2321,8 @@ class PatientTest < ActiveSupport::TestCase
     }
     patient.monitoring_history_edit(history_data, nil)
     h = History.where(patient: patient)
-    assert_match /Case Status.*"Confirmed".*"Unknown"/, h.first.comment
-    assert_match /Latest Public Health Action.*"Recommended laboratory testing".*"None"/, h.second.comment
+    assert_match(/Case Status.*"Confirmed".*"Unknown"/, h.first.comment)
+    assert_match(/Latest Public Health Action.*"Recommended laboratory testing".*"None"/, h.second.comment)
   end
 
   test 'monitoring_history_edit handles jurisdiction_id change' do
@@ -2334,7 +2334,7 @@ class PatientTest < ActiveSupport::TestCase
     }
     patient.monitoring_history_edit(history_data, nil)
     h = History.where(patient: patient).first
-    assert_match /Jurisdiction/, h.comment
+    assert_match(/Jurisdiction/, h.comment)
   end
 end
 # rubocop:enable Metrics/ClassLength
