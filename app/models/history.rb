@@ -16,6 +16,7 @@ class History < ApplicationRecord
     reports_reviewed: 'Reports Reviewed',
     report_reviewed: 'Report Reviewed',
     report_reminder: 'Report Reminder',
+    errored_report_reminder: 'Unsuccessful Report Reminder',
     report_note: 'Report Note',
     lab_result: 'Lab Result',
     lab_result_edit: 'Lab Result Edit',
@@ -111,6 +112,37 @@ class History < ApplicationRecord
       .where(history_type: [HISTORY_TYPES[:reports_reviewed], HISTORY_TYPES[:report_reviewed]])
   }
 
+  def self.errored_report_reminder_group_of_patients(patients: nil, created_by: 'Sara Alert System', comment: 'Failed Contact Attempt', error_message: nil)
+    histories = []
+    patients.uniq.each do |pat|
+      # Avoid adding multiple errored history items if HoH has errored contact attempts for
+      # contact attempts to them on behalf of their dependents. This would be the
+      # case for failed weblinks
+      last_history = pat&.histories&.last
+      next if !last_history.nil? && (last_history.history_type == 'Unsuccessful Report Reminder') && ((Time.now - last_history&.created_at) / 60) < 5
+
+      if pat.responder == pat
+        recipient = 'this monitoree'
+        responder = pat
+      else
+        recipient = "this monitoree's head of household"
+        responder = pat.responder
+      end
+      details = if !error_message.nil?
+                  ' Error details: ' + error_message
+                else
+                  ''
+                end
+      comment = if responder&.preferred_contact_method&.include?('SMS')
+                  "Sara Alert attempted to send an SMS to #{recipient} at #{responder.primary_telephone}, but the message could not be delivered.#{details}"
+                else
+                  "Sara Alert attempted to call #{recipient} at #{responder.primary_telephone}, but the call could not be completed.#{details}"
+                end
+      histories << History.new(created_by: created_by, comment: comment, patient_id: pat.id, history_type: HISTORY_TYPES[:errored_report_reminder])
+    end
+    History.import! histories
+  end
+
   def self.record_edit(patient: nil, created_by: 'Sara Alert System', comment: 'User edited a record.')
     create_history(patient, created_by, HISTORY_TYPES[:record_edit], comment)
   end
@@ -144,7 +176,12 @@ class History < ApplicationRecord
   end
 
   def self.report_reminder(patient: nil, created_by: 'Sara Alert System', comment: 'User sent a report reminder to the monitoree.')
-    create_history(patient, created_by, HISTORY_TYPES[:report_reminder], comment) unless patient&.preferred_contact_method.nil?
+    create_history(patient, created_by, HISTORY_TYPES[:report_reminder],
+                   comment)
+  end
+
+  def self.errored_report_reminder(patient: nil, created_by: 'Sara Alert System', comment: 'Unsuccessful report reminder.')
+    create_history(patient, created_by, HISTORY_TYPES[:errored_report_reminder], comment)
   end
 
   def self.lab_result(patient: nil, created_by: 'Sara Alert System', comment: 'User added a new lab result.')

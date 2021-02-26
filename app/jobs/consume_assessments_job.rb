@@ -13,7 +13,8 @@ class ConsumeAssessmentsJob < ApplicationJob
     while (msg = queue.pop)
       begin
         message = JSON.parse(msg)&.slice('threshold_condition_hash', 'reported_symptoms_array',
-                                         'patient_submission_token', 'experiencing_symptoms', 'response_status')
+                                         'patient_submission_token', 'experiencing_symptoms',
+                                         'response_status', 'error_code')
         # Invalid message
         if message.nil?
           Rails.logger.info 'ConsumeAssessmentsJob: skipping nil message...'
@@ -37,6 +38,15 @@ class ConsumeAssessmentsJob < ApplicationJob
         # Failed to find patient
         if patient.nil?
           Rails.logger.info "ConsumeAssessmentsJob: skipping nil patient (token: #{message['patient_submission_token']})..."
+          queue.commit
+          next
+        end
+
+        # Error occured in twilio studio flow
+        unless message['error_code'].blank?
+          TwilioSender.handle_twilio_error_codes(patient, message['error_code'])
+          # Will attempt to resend assessment if phone is off or if unkown error occurs
+          patient.update(last_assessment_reminder_sent: nil) if message['error_code']&.in? TwilioSender.retry_eligible_error_codes
           queue.commit
           next
         end
