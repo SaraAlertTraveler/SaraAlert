@@ -17,6 +17,7 @@ class ThresholdCondition < Condition
   # manual follow-up.
   def clone_symptoms_negate_bool_values
     new_symptoms = symptoms.to_a.deep_dup
-    new_symptoms.each(&:negate)
+    new_symptoms.where(type: 'BoolSymptom').each(&:negate)
+    new_symptoms.where.not(type: 'BoolSymptom').each { |s| s.value = nil }
   end
 end
