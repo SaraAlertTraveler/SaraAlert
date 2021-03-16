@@ -200,10 +200,10 @@ class PublicHealthHeader extends React.Component {
             <i className="fas fa-people-arrows"></i> Exposure Monitoring{' '}
             {this.state.counts.exposure !== undefined && <span id="exposureCount">({this.state.counts.exposure})</span>}
           </Button>
-          <Button variant={this.props.workflow === 'isolation' ? 'primary' : 'outline-primary'} href={`${window.BASE_PATH}/public_health/isolation`}>
+          {/* <Button variant={this.props.workflow === 'isolation' ? 'primary' : 'outline-primary'} href={`${window.BASE_PATH}/public_health/isolation`}>
             <i className="fas fa-house-user"></i> Isolation Monitoring{' '}
             {this.state.counts.isolation !== undefined && <span id="isolationCount">({this.state.counts.isolation})</span>}
-          </Button>
+          </Button> */}
         </ButtonGroup>
 
         {this.renderUploadModal()}

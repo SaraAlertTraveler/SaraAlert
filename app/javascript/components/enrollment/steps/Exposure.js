@@ -613,7 +613,7 @@ class Exposure extends React.Component {
               {this.state.errors['potential_exposure_country']}
             </Form.Control.Feedback>
           </Form.Group>
-          <Form.Group
+          {/* <Form.Group
             as={Col}
             lg={{ span: 8, order: 4 }}
             md={{ span: 12, order: 3 }}
@@ -629,7 +629,7 @@ class Exposure extends React.Component {
               onChange={this.handleChange}
             />
             <InfoTooltip tooltipTextKey="continuousExposure" location="right"></InfoTooltip>
-          </Form.Group>
+          </Form.Group> */}
         </Form.Row>
         <Form.Label className="nav-input-label pb-1">EXPOSURE RISK FACTORS (USE COMMAS TO SEPARATE MULTIPLE SPECIFIED VALUES)</Form.Label>
         <Form.Row>
