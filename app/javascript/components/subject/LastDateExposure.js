@@ -1,6 +1,7 @@
 import React from 'react';
 import { PropTypes } from 'prop-types';
-import { Button, Col, Form, Modal, OverlayTrigger, Row, Tooltip } from 'react-bootstrap';
+import { Form, Row, Col, Button, Modal } from 'react-bootstrap';
+// import { Button, Col, Form, Modal, OverlayTrigger, Row, Tooltip } from 'react-bootstrap';
 
 import { formatDate } from '../../utils/DateTime';
 import _ from 'lodash';
@@ -231,7 +232,7 @@ class LastDateExposure extends React.Component {
             </Row>
             <Row className="pt-2">
               <Col>
-                <OverlayTrigger
+                {/* <OverlayTrigger
                   key="tooltip-ot-ce"
                   placement="left"
                   overlay={
@@ -251,7 +252,7 @@ class LastDateExposure extends React.Component {
                     />
                   </span>
                 </OverlayTrigger>
-                <InfoTooltip tooltipTextKey="continuousExposure" location="right"></InfoTooltip>
+                <InfoTooltip tooltipTextKey="continuousExposure" location="right"></InfoTooltip>*/}
               </Col>
             </Row>
           </Form.Group>
