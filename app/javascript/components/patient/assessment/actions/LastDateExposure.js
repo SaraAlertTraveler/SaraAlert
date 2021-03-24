@@ -230,7 +230,7 @@ class LastDateExposure extends React.Component {
             </Row>
             <Row className="pt-2">
               <Col>
-                <OverlayTrigger
+                {/* <OverlayTrigger
                   key="tooltip-ot-ce"
                   placement="left"
                   overlay={
@@ -250,7 +250,7 @@ class LastDateExposure extends React.Component {
                     />
                   </span>
                 </OverlayTrigger>
-                <InfoTooltip tooltipTextKey="continuousExposure" location="right"></InfoTooltip>
+                <InfoTooltip tooltipTextKey="continuousExposure" location="right"></InfoTooltip>*/}
               </Col>
             </Row>
           </Form.Group>
