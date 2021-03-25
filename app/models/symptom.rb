@@ -12,7 +12,7 @@ class Symptom < ApplicationRecord
   end
 
   def self.valid_types
-    %w[FloatSymptom BoolSymptom IntegerSymptom]
+    %w[FloatSymptom BoolSymptom IntegerSymptom FloatSurvey BoolSurvey IntegerSurvey]
   end
 
   validates :type, inclusion: valid_types, presence: true
@@ -45,11 +45,11 @@ class Symptom < ApplicationRecord
 
   def value
     case type
-    when 'BoolSymptom'
+    when 'BoolSymptom', 'BoolSurvey'
       bool_value
-    when 'IntegerSymptom'
+    when 'IntegerSymptom', 'IntegerSymptom'
       int_value
-    when 'FloatSymptom'
+    when 'FloatSymptom', 'FloatSymptom'
       float_value
     end
   end
