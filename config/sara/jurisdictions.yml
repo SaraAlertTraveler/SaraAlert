@@ -104,6 +104,21 @@
             required: true
             threshold_operator: 'Equal'
             group: 2
+        'Symptoms Improving':
+            prompt: 'Are your symptoms improving?'
+            symptomatic_conditional: true
+            group: 1
+            value: true
+            type: 'BoolSurvey'
+            required: true
+            threshold_operator: 'Equal'
+        'Meal Count':
+            prompt: 'How many meals do you eat a day?'
+            symptomatic_conditional: false
+            value: 3
+            type: 'IntegerSurvey'
+            required: false
+            threshold_operator: 'GreaterThan'
     # Jurisdictions follow a hierarchy, the hierarchy is defined by nesting jurisdictions
     # in the children: field
     children:

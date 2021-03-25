@@ -68,6 +68,14 @@ en:
       congestion-or-runny-nose:
         name: 'Congestion or Runny Nose'
         notes: ''
+      symptoms-improving:
+        name: 'Symptoms Improving'
+        notes: ''
+        prompt: 'Are your symptoms improving?'
+      meal-count:
+        name: 'Meal Count'
+        notes: ''
+        prompt: 'How many meals do you eat a day?'
     threshold-op:
       less-than: 'Less Than'
       less-than-or-equal: 'Less Than Or Equal to'
@@ -78,6 +86,7 @@ en:
     web:
       title: 'Daily Self-Report'
       bool-title: 'Please select all symptoms which you are experiencing.'
+      survey-title: 'Please complete these additional survey questions.'
       submit: 'Submit'
       thank-you: 'Thank You For Completing Your Self Report'
       instruction1: 'If you did not report any symptoms, please continue to follow the recommendations provided by your local health department.'
