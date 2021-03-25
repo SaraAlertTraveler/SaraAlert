@@ -190,6 +190,32 @@ class SymptomsAssessment extends React.Component {
     );
   };
 
+  boolSurvey = symp => {
+    // null bool values will default to false
+    symp.value = symp.value === true;
+    let noSymptomsChecked = this.state.noSymptomsCheckbox;
+
+    return (
+      <Form.Check
+        type="checkbox"
+        id={`${symp.name}${this.props.idPre ? '_idpre' + this.props.idPre : ''}`}
+        key={`key_${symp.name}${this.props.idPre ? '_idpre' + this.props.idPre : ''}`}
+        checked={symp.value}
+        disabled={noSymptomsChecked}
+        aria-label={`${symp.name} Symptom Check`}
+        label={
+          <div>
+            <b>{this.props.translations[this.props.lang]['symptoms'][symp.name]['prompt']}</b>{' '}
+            {this.props.translations[this.props.lang]['symptoms'][symp.name]['notes']
+              ? ' ' + this.props.translations[this.props.lang]['symptoms'][symp.name]['notes']
+              : ''}
+          </div>
+        }
+        className="pb-2"
+        onChange={this.handleBoolChange}></Form.Check>
+    );
+  };
+
   integerSymptom = symp => {
     const key = `key_${symp.name}${this.props.idPre ? '_idpre' + this.props.idPre : ''}`;
     const id = `${symp.name}${this.props.idPre ? '_idpre' + this.props.idPre : ''}`;
@@ -227,6 +253,23 @@ class SymptomsAssessment extends React.Component {
         </Form.Label>
         {symp.type === 'IntegerSymptom' && this.integerSymptom(symp)}
         {symp.type === 'FloatSymptom' && this.floatSymptom(symp)}
+      </Form.Row>
+    );
+  };
+
+  intOrFloatSurvey = symp => {
+    const key = `key_${symp.name}${this.props.idPre ? '_idpre' + this.props.idPre : ''}`;
+    const id = `${symp.name}${this.props.idPre ? '_idpre' + this.props.idPre : ''}`;
+    return (
+      <Form.Row className="pt-3" key={key}>
+        <Form.Label className="nav-input-label" key={key + '_label'} htmlFor={id}>
+          {this.props.translations[this.props.lang]['symptoms'][symp.name]['prompt']}{' '}
+          {this.props.translations[this.props.lang]['symptoms'][symp.name]['notes']
+            ? ' ' + this.props.translations[this.props.lang]['symptoms'][symp.name]['notes']
+            : ''}
+        </Form.Label>
+        {symp.type === 'IntegerSurvey' && this.integerSymptom(symp)}
+        {symp.type === 'FloatSurvey' && this.floatSymptom(symp)}
       </Form.Row>
     );
   };
@@ -269,6 +312,25 @@ class SymptomsAssessment extends React.Component {
                   return x.type === 'FloatSymptom';
                 })
                 .map(symp => this.intOrFloatSymptom(symp))}
+              <Form.Row>
+                <Form.Label className="nav-input-label pb-3 pt-4">{this.props.translations[this.props.lang]['web']['survey-title']}</Form.Label>
+              </Form.Row>
+              {this.state.reportState.symptoms
+                .filter(x => {
+                  return x.type === 'BoolSurvey';
+                })
+                .sort((a, b) => {
+                  return a?.name?.localeCompare(b?.name);
+                })
+                .map(symp => this.boolSurvey(symp))}
+              {this.state.reportState.symptoms
+                .filter(x => {
+                  return x.type === 'IntegerSurvey';
+                })
+                .sort((a, b) => {
+                  return a?.name?.localeCompare(b?.name);
+                })
+                .map(symp => this.intOrFloatSurvey(symp))}
             </Form.Group>
           </Form.Row>
           <Form.Row className="pt-4">
