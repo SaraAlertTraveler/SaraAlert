@@ -16,7 +16,7 @@ function getWrapper(language, contactInfo) {
 
 describe('AssessmentCompleted', () => {
   it('Properly renders all main components in English', () => {
-    const language = 'en';
+    const language = 'eng';
     const wrapper = getWrapper(language, contact);
     expect(wrapper.find(Card.Header).exists()).toBeTruthy();
     expect(wrapper.find(Card.Header).text()).toEqual(mockTranslations[language]['web']['title']);
@@ -28,7 +28,7 @@ describe('AssessmentCompleted', () => {
   });
 
   it('Properly renders all main components in Spanish', () => {
-    const language = 'es';
+    const language = 'spa';
     const wrapper = getWrapper(language, contact);
     expect(wrapper.find(Card.Header).exists()).toBeTruthy();
     expect(wrapper.find(Card.Header).text()).toEqual(mockTranslations[language]['web']['title']);
@@ -40,7 +40,7 @@ describe('AssessmentCompleted', () => {
   });
 
   it('Properly renders all main components in Spanish (Puerto Rican)', () => {
-    const language = 'es-PR';
+    const language = 'spa-PR';
     const wrapper = getWrapper(language, contact);
     expect(wrapper.find(Card.Header).exists()).toBeTruthy();
     expect(wrapper.find(Card.Header).text()).toEqual(mockTranslations[language]['web']['title']);
@@ -52,7 +52,7 @@ describe('AssessmentCompleted', () => {
   });
 
   it('Properly renders all main components in French', () => {
-    const language = 'fr';
+    const language = 'fra';
     const wrapper = getWrapper(language, contact);
     expect(wrapper.find(Card.Header).exists()).toBeTruthy();
     expect(wrapper.find(Card.Header).text()).toEqual(mockTranslations[language]['web']['title']);
@@ -64,7 +64,7 @@ describe('AssessmentCompleted', () => {
   });
 
   it('Properly renders all main components in Somali', () => {
-    const language = 'so';
+    const language = 'som';
     const wrapper = getWrapper(language, contact);
     expect(wrapper.find(Card.Header).exists()).toBeTruthy();
     expect(wrapper.find(Card.Header).text()).toEqual(mockTranslations[language]['web']['title']);
@@ -76,7 +76,7 @@ describe('AssessmentCompleted', () => {
   });
 
   it('Properly renders email contact information', () => {
-    const language = 'en';
+    const language = 'eng';
     const wrapper = getWrapper(language, { email: 'email@example.com' });
     expect(wrapper.find(Card.Body).find(Form.Label).at(1).text().includes(mockTranslations[language]['web']['email'])).toBeTruthy();
     expect(wrapper.find(Card.Body).find(Form.Label).at(1).find('i').exists()).toBeTruthy();
@@ -87,7 +87,7 @@ describe('AssessmentCompleted', () => {
   });
 
   it('Properly renders phone contact information', () => {
-    const language = 'en';
+    const language = 'eng';
     const wrapper = getWrapper(language, { phone: '1111111111' });
     expect(wrapper.find(Card.Body).find(Form.Label).at(1).text().includes(mockTranslations[language]['web']['phone'])).toBeTruthy();
     expect(wrapper.find(Card.Body).find(Form.Label).at(1).find('i').exists()).toBeTruthy();
@@ -98,7 +98,7 @@ describe('AssessmentCompleted', () => {
   });
 
   it('Properly renders webpage contact information', () => {
-    const language = 'en';
+    const language = 'eng';
     const wrapper = getWrapper(language, { webpage: 'somewebpage.com' });
     expect(wrapper.find(Card.Body).find(Form.Label).at(1).text().includes(mockTranslations[language]['web']['webpage'])).toBeTruthy();
     expect(wrapper.find(Card.Body).find(Form.Label).at(1).find('i').exists()).toBeTruthy();
@@ -109,7 +109,7 @@ describe('AssessmentCompleted', () => {
   });
 
   it('Hides contact information when none is provided', () => {
-    const language = 'en';
+    const language = 'eng';
     const wrapper = getWrapper(language, {});
     expect(wrapper.find(Card.Body).find(Form.Label).at(1).text().includes(mockTranslations[language]['web']['email'])).toBeFalsy();
     expect(wrapper.find(Card.Body).find(Form.Label).at(1).text().includes(mockTranslations[language]['web']['phone'])).toBeFalsy();
