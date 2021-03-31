@@ -178,7 +178,7 @@ class LastDateExposure extends React.Component {
   render() {
     return (
       <React.Fragment>
-        {this.state.showLastDateOfExposureModal &&
+        {/* {this.state.showLastDateOfExposureModal &&
           this.createModal(
             'Last Date of Exposure',
             `Are you sure you want to ${this.state.last_date_of_exposure ? 'modify' : 'clear'} the Last Date of Exposure${
@@ -188,8 +188,18 @@ class LastDateExposure extends React.Component {
             } for the selected record${this.props.household_members.length > 1 ? '(s):' : '.'}`,
             this.closeModal,
             this.submit
+          )} */}
+        {this.state.showLastDateOfExposureModal &&
+          this.createModal(
+            'Last Date of Exposure',
+            `Are you sure you want to ${this.state.last_date_of_exposure ? 'modify' : 'clear'} the Last Date of Exposure${
+              this.state.last_date_of_exposure ? ` to ${moment(this.state.last_date_of_exposure).format('MM/DD/YYYY')}` : ''
+            }? The Last Date of Exposure will be updated ${this.state.last_date_of_exposure ? '' : 'to blank '}
+             for the selected record${this.props.household_members.length > 1 ? '(s):' : '.'}`,
+            this.closeModal,
+            this.submit
           )}
-        {this.state.showContinuousExposureModal &&
+        {/* {this.state.showContinuousExposureModal &&
           this.createModal(
             'Continuous Exposure',
             `Are you sure you want to turn ${this.state.continuous_exposure ? 'ON' : 'OFF'} Continuous Exposure? The Last Date of Exposure will ${
@@ -199,7 +209,7 @@ class LastDateExposure extends React.Component {
             }`,
             this.closeModal,
             this.submit
-          )}
+          )} */}
         <Row>
           <SymptomOnset authenticity_token={this.props.authenticity_token} patient={this.props.patient} />
           <Form.Group as={Col} controlId="last_date_of_exposure">
