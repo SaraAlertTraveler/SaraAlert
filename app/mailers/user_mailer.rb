@@ -2,7 +2,7 @@
 
 # UserMailer: mailers for users
 class UserMailer < ApplicationMailer
-  default from: 'notifications@saraalert.org'
+  default from: ADMIN_OPTIONS['email_from_address']
 
   def assessment_job_email(sent, not_sent, eligible)
     @sent = sent
