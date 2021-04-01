@@ -639,11 +639,22 @@ class Patient extends React.Component {
                   </div>
                   <div className="item-group">
                     <div>
-                      <b>Symptom Onset:</b>{' '}
-                      <span>{this.props.details.symptom_onset ? moment(this.props.details.symptom_onset, 'YYYY-MM-DD').format('MM/DD/YYYY') : '--'}</span>
+                      <b>Case Status: </b>
+                      <span>{this.props.details.case_status || '--'}</span>
                     </div>
+                    {this.props.details.first_positive_lab_at && (
+                      <div>
+                        <b>First Positive Lab Collected: </b>
+                        <span>{moment(this.props.details.first_positive_lab_at, 'YYYY-MM-DD').format('MM/DD/YYYY')}</span>
+                      </div>
+                    )}
                     <div>
-                      <b>Case Status:</b> <span>{this.props.details.case_status || '--'}</span>
+                      <b>Symptom Onset: </b>
+                      <span>
+                        {this.props.details.symptom_onset
+                          ? moment(this.props.details.symptom_onset, 'YYYY-MM-DD').format('MM/DD/YYYY')
+                          : 'No symptoms reported'}
+                      </span>
                     </div>
                   </div>
                 </Col>

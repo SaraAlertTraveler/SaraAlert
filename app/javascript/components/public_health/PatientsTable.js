@@ -54,7 +54,8 @@ class PatientsTable extends React.Component {
           { field: 'dob', label: 'Date of Birth', isSortable: true, tooltip: null, filter: formatDate },
           { field: 'end_of_monitoring', label: 'End of Monitoring', isSortable: true, tooltip: null, filter: this.formatEndOfMonitoring },
           { field: 'extended_isolation', label: 'Extended Isolation To', isSortable: true, tooltip: 'extendedIsolation', filter: formatDate },
-          { field: 'symptom_onset', label: 'Symptom Onset', isSortable: true, tooltip: null, filter: formatDate },
+          { field: 'first_positive_lab_at', label: 'First Positive Lab', isSortable: true, filter: formatDate },
+          { field: 'symptom_onset', label: 'Symptom Onset', isSortable: true, tooltip: null, filter: this.formatSymptomOnset },
           { field: 'risk_level', label: 'Risk Level', isSortable: true, tooltip: null },
           { field: 'monitoring_plan', label: 'Monitoring Plan', isSortable: true, tooltip: null },
           { field: 'public_health_action', label: 'Latest Public Health Action', isSortable: true, tooltip: null },
@@ -92,7 +93,7 @@ class PatientsTable extends React.Component {
     };
   }
 
-  componentDidMount() {
+  componentDidMount = () => {
     // load local storage variables when present
     const query = {};
 
@@ -169,7 +170,7 @@ class PatientsTable extends React.Component {
         this.setState(count);
       });
     });
-  }
+  };
 
   clearAllFilters = async () => {
     if (await confirmDialog('Are you sure you want to clear all filters? All active filters and searches will be cleared.')) {
@@ -476,13 +477,17 @@ class PatientsTable extends React.Component {
     return <a href={`/patients/${rowData.id}`}>{name}</a>;
   };
 
-  formatEndOfMonitoring(data) {
+  formatEndOfMonitoring = data => {
     const endOfMonitoring = data.value;
     if (endOfMonitoring === 'Continuous Exposure') {
       return 'Continuous Exposure';
     }
     return moment(endOfMonitoring, 'YYYY-MM-DD').format('MM/DD/YYYY');
-  }
+  };
+
+  formatSymptomOnset = data => {
+    return data?.value || 'None reported';
+  };
 
   formatLatestReport = data => {
     const rowData = data.rowData;
@@ -503,15 +508,15 @@ class PatientsTable extends React.Component {
     );
   };
 
-  getRowCheckboxAriaLabel(rowData) {
+  getRowCheckboxAriaLabel = rowData => {
     return `Monitoree ${rowData.name}`;
-  }
+  };
 
-  createEligibilityTooltip(data) {
+  createEligibilityTooltip = data => {
     const reportEligibility = data.value;
     const rowData = data.rowData;
     return <EligibilityTooltip id={rowData.id.toString()} report_eligibility={reportEligibility} inline={false} />;
-  }
+  };
 
   /**
    * Get a local storage value
@@ -554,7 +559,7 @@ class PatientsTable extends React.Component {
     }
   };
 
-  render() {
+  render = () => {
     return (
       <div className="mx-2 pb-4">
         <Nav variant="tabs" activeKey={this.state.query.tab}>
@@ -726,7 +731,7 @@ class PatientsTable extends React.Component {
         <ToastContainer position="top-center" autoClose={2000} closeOnClick pauseOnVisibilityChange draggable pauseOnHover />
       </div>
     );
-  }
+  };
 }
 
 PatientsTable.propTypes = {

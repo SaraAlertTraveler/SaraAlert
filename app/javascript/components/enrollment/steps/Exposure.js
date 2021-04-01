@@ -1,10 +1,11 @@
 import React from 'react';
 import { PropTypes } from 'prop-types';
-import { Button, Card, Col, Form } from 'react-bootstrap';
+import { Button, Card, Col, Form, Row } from 'react-bootstrap';
 import * as yup from 'yup';
 import axios from 'axios';
 import moment from 'moment';
 
+import LaboratoryModal from '../../laboratory/LaboratoryModal';
 import confirmDialog from '../../util/ConfirmDialog';
 import DateInput from '../../util/DateInput';
 import InfoTooltip from '../../util/InfoTooltip';
@@ -15,7 +16,14 @@ class Exposure extends React.Component {
     super(props);
     this.state = {
       ...this.props,
-      current: { ...this.props.currentState },
+      current: {
+        ...this.props.currentState,
+        patient: {
+          ...this.props.currentState.patient,
+          no_symptom_history:
+            this.props.edit_mode && this.props.patient.isolation && !this.props.patient.symptom_onset && !this.props.symptomatic_assessments_exist,
+        },
+      },
       errors: {},
       modified: {},
       jurisdiction_path: this.props.jurisdiction_paths[this.props.currentState.patient.jurisdiction_id],
@@ -23,12 +31,8 @@ class Exposure extends React.Component {
       originalAssignedUser: this.props.currentState.patient.assigned_user,
       assigned_users: this.props.assigned_users,
       selected_jurisdiction: this.props.selected_jurisdiction,
+      showLabModal: false,
     };
-    this.handleChange = this.handleChange.bind(this);
-    this.handlePropagatedFieldChange = this.handlePropagatedFieldChange.bind(this);
-    this.validate = this.validate.bind(this);
-    this.isolationFields = this.isolationFields.bind(this);
-    this.exposureFields = this.exposureFields.bind(this);
   }
 
   componentDidMount() {
@@ -41,7 +45,7 @@ class Exposure extends React.Component {
     }
   }
 
-  handleChange(event) {
+  handleChange = event => {
     let value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
     let current = this.state.current;
     let modified = this.state.modified;
@@ -73,7 +77,7 @@ class Exposure extends React.Component {
       // trim() call included since there is a bug with yup validation for numbers that allows whitespace entry
       value = event.target.value.trim() === '' ? null : parseInt(event.target.value);
     } else if (event?.target?.id && event.target.id === 'continuous_exposure') {
-      // clear out LDE if CE is turned on and populated it with previous LDE if CE is turned off
+      // clear out LDE if CE is turned on and populate it with previous LDE if CE is turned off
       const lde = value ? null : this.props.patient.last_date_of_exposure;
       current.patient.last_date_of_exposure = lde;
       if (modified.patient) {
@@ -82,6 +86,16 @@ class Exposure extends React.Component {
         modified = { patient: { last_date_of_exposure: lde } };
       }
       this.updateLDEandCEValidations({ ...current.patient, [event.target.id]: value });
+    } else if (event?.target?.id && event.target.id === 'no_symptom_history') {
+      // clear out SO if NSH is turned on and populate it with previous SO if NSH is turned off
+      const so = value ? null : this.props.patient.symptom_onset;
+      current.patient.symptom_onset = so;
+      if (modified.patient) {
+        modified.patient.symptom_onset = so;
+      } else {
+        modified = { patient: { symptom_onset: so } };
+      }
+      this.updateSOandNSHValidations({ ...current.patient, [event.target.id]: value });
     }
     this.setState(
       {
@@ -92,22 +106,30 @@ class Exposure extends React.Component {
         this.props.setEnrollmentState({ ...this.state.modified });
       }
     );
-  }
+  };
 
-  handleDateChange(field, date) {
+  handleDateChange = (field, date) => {
     let current = this.state.current;
     let modified = this.state.modified;
     if (field === 'last_date_of_exposure') {
-      // turn off CE is LDE is populated
+      // turn off CE if LDE is populated
       if (date) {
         current.patient.continuous_exposure = false;
-        if (modified.patient) {
-          modified.patient.continuous_exposure = false;
-        } else {
-          modified = { patient: { continuous_exposure: false } };
-        }
+        modified = { patient: { ...modified.patient, continuous_exposure: false } };
       }
       this.updateLDEandCEValidations({ ...current.patient, [field]: date });
+    } else if (field === 'symptom_onset') {
+      // turn off NSH if SO is populated
+      if (date) {
+        current.patient.no_symptom_history = false;
+        modified = { patient: { ...modified.patient, no_symptom_history: false } };
+        // only clear out first positive lab if it isn't saved already
+        if (!this.props.first_positive_lab) {
+          current.first_positive_lab = null;
+          modified.first_positive_lab = null;
+        }
+      }
+      this.updateSOandNSHValidations({ ...current.patient, [field]: date });
     }
     this.setState(
       {
@@ -118,11 +140,11 @@ class Exposure extends React.Component {
         this.props.setEnrollmentState({ ...this.state.modified });
       }
     );
-  }
+  };
 
-  handlePropagatedFieldChange(event) {
-    let current = this.state.current;
-    let modified = this.state.modified;
+  handlePropagatedFieldChange = event => {
+    const current = this.state.current;
+    const modified = this.state.modified;
     this.setState(
       {
         current: { ...current, propagatedFields: { ...current.propagatedFields, [event.target.name]: event.target.checked } },
@@ -132,23 +154,30 @@ class Exposure extends React.Component {
         this.props.setEnrollmentState({ ...this.state.modified });
       }
     );
-  }
+  };
+
+  handleLabChange = first_positive_lab => {
+    const current = this.state.current;
+    const modified = this.state.modified;
+    this.setState(
+      {
+        current: { ...current, patient: { ...current.patient, first_positive_lab_at: first_positive_lab.specimen_collection }, first_positive_lab },
+        modified: { ...modified, patient: { ...modified.patient, first_positive_lab_at: first_positive_lab.specimen_collection }, first_positive_lab },
+        showLabModal: false,
+      },
+      () => {
+        this.props.setEnrollmentState({ ...this.state.modified });
+      }
+    );
+  };
 
   updateStaticValidations = isolation => {
     // Update the Schema Validator based on workflow.
     if (isolation) {
-      schema = yup.object().shape({
-        ...staticValidations,
-        symptom_onset: yup
-          .date('Date must correspond to the "mm/dd/yyyy" format.')
-          .max(
-            moment()
-              .add(30, 'days')
-              .toDate(),
-            'Date can not be more than 30 days in the future.'
-          )
-          .required('Please enter a Symptom Onset Date.')
-          .nullable(),
+      this.updateSOandNSHValidations({
+        ...this.props.currentState.patient,
+        no_symptom_history:
+          this.props.edit_mode && this.props.patient.isolation && !this.props.patient.symptom_onset && !this.props.symptomatic_assessments_exist,
       });
     } else {
       this.updateLDEandCEValidations(this.props.patient);
@@ -194,7 +223,7 @@ class Exposure extends React.Component {
               .toDate(),
             'Date can not be more than 30 days in the future.'
           )
-          .required()
+          .required('Please enter a Last Date of Exposure')
           .nullable(),
         continuous_exposure: yup
           .bool()
@@ -219,11 +248,80 @@ class Exposure extends React.Component {
     });
   };
 
-  validate(callback) {
+  updateSOandNSHValidations = patient => {
+    if (!patient.symptom_onset && !patient.no_symptom_history) {
+      schema = yup.object().shape({
+        ...staticValidations,
+        symptom_onset: yup
+          .date('Date must correspond to the "mm/dd/yyyy" format.')
+          .max(
+            moment()
+              .add(30, 'days')
+              .toDate(),
+            'Date can not be more than 30 days in the future.'
+          )
+          .required('Please enter a Symptom Onset Date OR select No Symptom History and enter a first positive lab result')
+          .nullable(),
+        no_symptom_history: yup.bool().nullable(),
+      });
+    } else if (!patient.symptom_onset && patient.no_symptom_history) {
+      schema = yup.object().shape({
+        ...staticValidations,
+        symptom_onset: yup
+          .date('Date must correspond to the "mm/dd/yyyy" format.')
+          .oneOf([null, undefined])
+          .nullable(),
+        no_symptom_history: yup
+          .bool()
+          .oneOf([true])
+          .nullable(),
+      });
+    } else if (patient.symptom_onset && !patient.no_symptom_history) {
+      schema = yup.object().shape({
+        ...staticValidations,
+        symptom_onset: yup
+          .date('Date must correspond to the "mm/dd/yyyy" format.')
+          .max(
+            moment()
+              .add(30, 'days')
+              .toDate(),
+            'Date can not be more than 30 days in the future.'
+          )
+          .required('Please enter a Symptom Onset Date')
+          .nullable(),
+        no_symptom_history: yup
+          .bool()
+          .oneOf([null, undefined, false])
+          .nullable(),
+      });
+    } else {
+      schema = yup.object().shape({
+        ...staticValidations,
+        symptom_onset: yup
+          .date('Date must correspond to the "mm/dd/yyyy" format.')
+          .oneOf([null, undefined], 'Please enter a Symptom Onset Date OR select No Symptom History, but not both.')
+          .nullable(),
+        continuous_exposure: yup.bool().nullable(),
+      });
+    }
+    this.setState(state => {
+      const errors = state.errors;
+      delete errors.symptom_onset;
+      delete errors.no_symptom_history;
+      return { errors };
+    });
+  };
+
+  validate = callback => {
     let self = this;
     schema
       .validate(this.state.current.patient, { abortEarly: false })
       .then(function() {
+        if (self.state.current.patient.no_symptom_history && !self.state.current.first_positive_lab) {
+          self.setState({ errors: { first_positive_lab: 'Please enter a lab result' } });
+          return;
+        }
+
         // No validation issues? Invoke callback (move to next step)
         self.setState({ errors: {} }, async () => {
           if (self.state.current.patient.jurisdiction_id !== self.state.originalJurisdictionId) {
@@ -260,33 +358,136 @@ class Exposure extends React.Component {
           self.setState({ errors: issues });
         }
       });
-  }
+  };
 
-  isolationFields() {
+  isolationFields = () => {
     return (
       <React.Fragment>
         <Form.Row>
-          <Form.Group as={Col} md="7" controlId="symptom_onset">
-            <Form.Label className="nav-input-label">SYMPTOM ONSET DATE{schema?.fields?.symptom_onset?._exclusive?.required && ' *'}</Form.Label>
-            <DateInput
-              id="symptom_onset"
-              aria-label="Symptom Onset Date"
-              date={this.state.current.patient.symptom_onset}
-              minDate={'2020-01-01'}
-              maxDate={moment()
-                .add(30, 'days')
-                .format('YYYY-MM-DD')}
-              onChange={date => this.handleDateChange('symptom_onset', date)}
-              placement="bottom"
-              isInvalid={!!this.state.errors['symptom_onset']}
-              customClass="form-control-lg"
-              ariaLabel="Symptom Onset Date Input"
-            />
-            <Form.Control.Feedback className="d-block" type="invalid">
-              {this.state.errors['symptom_onset']}
-            </Form.Control.Feedback>
+          <Form.Group as={Col} sm="24" md="12" xl="9" controlId="symptom_onset" className="mb-2">
+            <Row>
+              <Col className="mb-2">
+                <Form.Label className="nav-input-label">SYMPTOM ONSET DATE{schema?.fields?.symptom_onset?._exclusive?.required && ' *'}</Form.Label>
+                <DateInput
+                  id="symptom_onset"
+                  aria-label="Symptom Onset Date"
+                  date={this.state.current.patient.symptom_onset}
+                  minDate={'2020-01-01'}
+                  maxDate={moment()
+                    .add(30, 'days')
+                    .format('YYYY-MM-DD')}
+                  onChange={date => this.handleDateChange('symptom_onset', date)}
+                  placement="bottom"
+                  isInvalid={!!this.state.errors['symptom_onset']}
+                  customClass="form-control-lg"
+                  ariaLabel="Symptom Onset Date Input"
+                  isClearable={!this.props.symptomatic_assessments_exist}
+                />
+                <Form.Control.Feedback className="d-block" type="invalid">
+                  {this.state.errors['symptom_onset']}
+                </Form.Control.Feedback>
+              </Col>
+            </Row>
+            <Row>
+              <Col md="auto" className="mb-2">
+                <Form.Check
+                  size="lg"
+                  label={`NO SYMPTOM HISTORY${schema?.fields?.no_symptom_history?._whitelist?.list?.has(true) ? ' *' : ''}`}
+                  id="no_symptom_history"
+                  className="ml-1 d-inline"
+                  checked={!!this.state.current.patient.no_symptom_history}
+                  onChange={this.handleChange}
+                  disabled={this.props.symptomatic_assessments_exist}
+                />
+                <InfoTooltip
+                  tooltipTextKey={this.props.symptomatic_assessments_exist ? 'noSymptomHistoryDisabled' : 'noSymptomHistory'}
+                  location="right"></InfoTooltip>
+              </Col>
+            </Row>
+            <Row>
+              {this.state.current.first_positive_lab && (
+                <Col>
+                  <div className={this.state.current.patient.no_symptom_history ? '' : 'disabled-first-positive-lab'}>
+                    <div className="section-header">
+                      <Form.Label className="nav-input-label">FIRST POSITIVE LAB RESULT</Form.Label>
+                      <div className="edit-link">
+                        <Button
+                          variant="link"
+                          id="edit-first_positive_lab"
+                          className="py-0"
+                          disabled={!this.state.current.patient.no_symptom_history}
+                          onClick={() => this.setState({ showLabModal: true })}>
+                          Edit
+                        </Button>
+                      </div>
+                    </div>
+                    <Row>
+                      <Col>
+                        <div>
+                          <b>Type: </b>
+                          <span>{this.state.current.first_positive_lab.lab_type || '--'}</span>
+                        </div>
+                        <div>
+                          <b>Specimen Collection Date: </b>
+                          <span>
+                            {this.state.current.first_positive_lab.specimen_collection
+                              ? moment(this.state.current.first_positive_lab.specimen_collection, 'YYYY-MM-DD').format('MM/DD/YYYY')
+                              : '--'}
+                          </span>
+                        </div>
+                        <div>
+                          <b>Report Date: </b>
+                          <span>
+                            {this.state.current.first_positive_lab.report
+                              ? moment(this.state.current.first_positive_lab.report, 'YYYY-MM-DD').format('MM/DD/YYYY')
+                              : '--'}
+                          </span>
+                        </div>
+                        <div>
+                          <b>Result: </b>
+                          <span>{this.state.current.first_positive_lab.result || '--'}</span>
+                        </div>
+                      </Col>
+                    </Row>
+                  </div>
+                </Col>
+              )}
+              {!this.state.current.first_positive_lab && this.state.current.patient.no_symptom_history && (
+                <React.Fragment>
+                  <Col>
+                    <div className="py-1 pl-1">
+                      <span>You must enter the lab result that provides evidence that this monitoree is a case</span>
+                    </div>
+                  </Col>
+                  <Col md="24" lg="auto">
+                    <Button
+                      variant="primary"
+                      size="md"
+                      disabled={!this.state.current.patient.no_symptom_history}
+                      onClick={() => this.setState({ showLabModal: true })}>
+                      <i className="fas fa-plus-square mr-1"></i>
+                      Enter Lab Result
+                    </Button>
+                    <Form.Control.Feedback className="d-block" type="invalid">
+                      {this.state.errors['first_positive_lab']}
+                    </Form.Control.Feedback>
+                  </Col>
+                </React.Fragment>
+              )}
+              {this.state.showLabModal && (
+                <LaboratoryModal
+                  lab={this.state.current.first_positive_lab}
+                  specimenCollectionRequired={true}
+                  onlyPositiveResult={true}
+                  submit={this.handleLabChange}
+                  cancel={() => this.setState({ showLabModal: false })}
+                  edit_mode={!!this.state.current.first_positive_lab}
+                  loading={false}
+                />
+              )}
+            </Row>
           </Form.Group>
-          <Form.Group as={Col} md="8" controlId="case_status">
+          <Form.Group as={Col} sm="24" md="12" xl="9" controlId="case_status" className="mb-2">
             <Form.Label className="nav-input-label">CASE STATUS{schema?.fields?.case_status?._exclusive?.required && ' *'}</Form.Label>
             <Form.Control
               isInvalid={this.state.errors['case_status']}
@@ -330,9 +531,9 @@ class Exposure extends React.Component {
         </Form.Row>
       </React.Fragment>
     );
-  }
+  };
 
-  exposureFields() {
+  exposureFields = () => {
     return (
       <React.Fragment>
         <Form.Row>
@@ -394,7 +595,7 @@ class Exposure extends React.Component {
           </Form.Group>
         </Form.Row>
         <Form.Row>
-          <Form.Group className="ml-1">
+          <Form.Group controlId="continuous_exposure" className="pl-1">
             <Form.Check
               size="lg"
               label={`CONTINUOUS EXPOSURE${schema?.fields?.continuous_exposure?._whitelist?.list?.has(true) ? ' *' : ''}`}
@@ -585,7 +786,7 @@ class Exposure extends React.Component {
         </Form.Row>
       </React.Fragment>
     );
-  }
+  };
 
   render() {
     return (
@@ -820,6 +1021,9 @@ Exposure.propTypes = {
   jurisdiction_paths: PropTypes.object,
   assigned_users: PropTypes.array,
   selected_jurisdiction: PropTypes.object,
+  first_positive_lab: PropTypes.object,
+  symptomatic_assessments_exist: PropTypes.bool,
+  edit_mode: PropTypes.bool,
   authenticity_token: PropTypes.string,
 };
 
