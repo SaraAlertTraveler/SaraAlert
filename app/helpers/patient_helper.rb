@@ -35,7 +35,7 @@ module PatientHelper
 
   def normalize_and_get_language_name(lang)
     return nil if lang.nil?
-
+    return lang if lang == 'spa-PR' # 'spa-PR' is the only case-sensitive language code
     lang = lang.to_s.downcase
     # tries to match lang to either a 3-letter iso code or a language name
     # If able to match, returns the 3-letter iso code for that language

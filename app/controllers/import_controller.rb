@@ -234,9 +234,9 @@ class ImportController < ApplicationController
     return nil if value.blank?
 
     val = normalize_and_get_language_name(value)
-    return val if PATIENT_HELPER_FILES[:languages].include?(val)
+    return val if val # val will the three-letter language code if value is matchable, else nil
 
-    err_msg = "'#{value}' is not a valid language for '#{VALIDATION[field][:label]}', please use the full language name or three letter ISO-639 abbreviation"
+    err_msg = "'#{value}' is not a valid language for '#{VALIDATION[field][:label]}'. Please use the full language name or three letter ISO-639 abbreviation"
     # VERIFY THAT THIS ALL WORKS WITH FHIR BCP LANGUAGE CODES (I DONT THINK IT DOES YET)
     raise ValidationError.new(err_msg, row_ind)
   end
