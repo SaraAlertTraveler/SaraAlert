@@ -64,7 +64,6 @@ module ImportExport # rubocop:todo Metrics/ModuleLength
   # Creates a list of excel files from exported data
   def xlsx_export(config, patients, inner_batch_size)
     files = []
-    separate_files = config[:separate_files].present?
 
     # Determine selected data types for export
     data_types = CUSTOM_EXPORT_OPTIONS.keys.select { |data_type| config.dig(:data, data_type, :checked).present? }
@@ -77,18 +76,15 @@ module ImportExport # rubocop:todo Metrics/ModuleLength
     last_row_nums = nil
 
     # One file for all data types, each data type in a different tab
-    workbooks = {} if separate_files
-    workbook = FastExcel.open(constant_memory: true) unless separate_files
+    workbook = FastExcel.open(constant_memory: true)
     sheets = {}
     last_row_nums = {}
     data_types.each do |data_type|
-      workbook = FastExcel.open(constant_memory: true) if separate_files
       worksheet = workbook.add_worksheet(config.dig(:data, data_type, :tab) || CUSTOM_EXPORT_OPTIONS.dig(data_type, :label))
       worksheet.auto_width = true
       worksheet.append_row(field_data.dig(data_type, :headers))
       last_row_nums[data_type] = 0
       sheets[data_type] = worksheet
-      workbooks[data_type] = workbook if separate_files
     end
 
     # NOTE: in_batches appears to NOT sort within batches, so explicit ordering on ID is also done deeper down.
@@ -107,15 +103,8 @@ module ImportExport # rubocop:todo Metrics/ModuleLength
       end
     end
 
-    if separate_files
-      data_types.each do |data_type|
-        files << { filename: build_export_filename(config, data_type, false), content: StringIO.new(workbooks[data_type].read_string) }
-      end
-    else
-      files << { filename: build_export_filename(config, nil, false), content: StringIO.new(workbook.read_string) }
-    end
 
-    files
+    files << { filename: build_export_filename(config, nil, false), content: StringIO.new(workbook.read_string) }
   end
 
   # Gets data for this batch of patients that may not have already been present in the export config (such as specific symptoms).
