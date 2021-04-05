@@ -103,7 +103,6 @@ module ImportExport # rubocop:todo Metrics/ModuleLength
       end
     end
 
-
     files << { filename: build_export_filename(config, nil, false), content: StringIO.new(workbook.read_string) }
   end
 

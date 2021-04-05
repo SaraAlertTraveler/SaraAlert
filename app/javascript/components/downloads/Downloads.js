@@ -21,7 +21,7 @@ class Downloads extends React.Component {
       data: { id: this.props.download.id },
     })
       .then(() => {
-        toast.success('This download has been marked for removal.', {
+        toast.success('Download Successful! You will not be able to download this file from this location in about an hour.', {
           position: toast.POSITION.TOP_CENTER,
         });
       })
