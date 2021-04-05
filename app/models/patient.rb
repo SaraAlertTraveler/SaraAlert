@@ -36,6 +36,8 @@ class Patient < ApplicationRecord
      monitored_address_state
      foreign_monitored_address_state
      additional_planned_travel_destination_state
+     primary_language
+     secondary_language
      ethnicity
      preferred_contact_method
      preferred_contact_time

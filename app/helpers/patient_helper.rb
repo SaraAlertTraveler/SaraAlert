@@ -33,7 +33,9 @@ module PatientHelper
     state_names[normalize_name(name)] || nil
   end
 
-  def normalize_and_get_language_name(lang)
+  # Is it okay to call this `self` so I can reference it in another file without having to include this helper file?
+  # FIXME
+  def self.normalize_and_get_language_name(lang)
     return nil if lang.nil?
     return lang if lang == 'spa-PR' # 'spa-PR' is the only case-sensitive language code
     lang = lang.to_s.downcase
@@ -61,8 +63,7 @@ module PatientHelper
   end
 
   def self.languages(language)
-    languages = PATIENT_HELPER_FILES[:languages]
-    languages[language&.downcase&.to_sym].present? ? languages[language&.downcase&.to_sym] : nil
+    PATIENT_HELPER_FILES[:languages][language&.downcase&.to_sym].present? ? PATIENT_HELPER_FILES[:languages][language&.downcase&.to_sym] : nil
   end
 
   # Calculated symptom onset date is based on latest symptomatic assessment.

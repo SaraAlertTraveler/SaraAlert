@@ -125,6 +125,15 @@ module FhirHelper # rubocop:todo Metrics/ModuleLength
     primary_phone = patient&.telecom&.find { |t| t&.system == 'phone' }
     secondary_phone = patient&.telecom&.select { |t| t&.system == 'phone' }&.second
     email = patient&.telecom&.find { |t| t&.system == 'email' }
+    # We want to allow the users to provide either the code or name of the Language
+    if patient&.communication&.first&.language&.coding&.first&.code.nil?
+      pl = patient&.communication&.first&.language&.coding&.first&.display
+      pl_path = "Patient.communication[0].language.coding[0].display"
+    else
+      pl = patient&.communication&.first&.language&.coding&.first&.code
+      pl_path = "Patient.communication[0].language.coding[0].code"
+    end
+    primary_language = attempt_language_matching(pl)
     {
       monitoring: { value: patient&.active.nil? ? false : patient.active, path: 'Patient.active' },
       first_name: { value: patient&.name&.first&.given&.first, path: 'Patient.name[0].given[0]' },
@@ -156,7 +165,7 @@ module FhirHelper # rubocop:todo Metrics/ModuleLength
       monitored_address_county: { value: address&.district, path: "Patient.address[#{address_index}].district" },
       monitored_address_state: { value: address&.state, path: "Patient.address[#{address_index}].state" },
       monitored_address_zip: { value: address&.postalCode, path: "Patient.address[#{address_index}].postalCode" },
-      primary_language: { value: patient&.communication&.first&.language&.coding&.first&.display, path: 'Patient.communication[0].language.coding[0].display' },
+      primary_language: { value: primary_language, path: pl_path },
       interpretation_required: { value: patient&.communication&.first&.preferred, path: 'Patient.communication[0].preferred' },
       white: race_code?(patient, '2106-3', OMB_URL),
       black_or_african_american: race_code?(patient, '2054-5', OMB_URL),
@@ -373,10 +382,17 @@ module FhirHelper # rubocop:todo Metrics/ModuleLength
   end
 
   # Given a language string, try to find the corresponding BCP 47 code for it and construct a FHIR::Coding.
+  # Do we need to worry that iso-639 is a larger set than BCP 47? @nfreiter
   def language_coding(language)
-    language = PATIENT_HELPER_FILES[:language][language.to_sym][:display]
-    # CORRECT THIS AT SOME POINT (OR AT LEAST VERIFY THIS WORKS)
-    PatientHelper.languages(language&.downcase) ? FHIR::Coding.new(**PatientHelper.languages(language&.downcase)) : nil
+    mappedLang = PatientHelper.normalize_and_get_language_name(language)
+    return language if mappedLang.nil? # Patients should not have invalid languages, but still safer to check here
+    language = PATIENT_HELPER_FILES[:languages][mappedLang.to_sym]
+    fhir_coding = FHIR::Coding.new
+    # @nfreiter should we map these back from iso-639 to bcp-47?
+    fhir_coding.code = language[:code]
+    fhir_coding.display = language[:display]
+    fhir_coding.system = language[:system]
+    return fhir_coding
   end
 
   def to_bool_extension(value, extension_id)
@@ -530,6 +546,13 @@ module FhirHelper # rubocop:todo Metrics/ModuleLength
     end
 
     address
+  end
+
+  def attempt_language_matching(lang)
+    # This function returns the `lang` passed in if it can't be matched
+    # Else returns the matched 'lang' iso code (stringified)
+    matched_val = PatientHelper.normalize_and_get_language_name(lang)
+    return matched_val ? matched_val.to_s : lang
   end
 
   def str_ext_path(base_path, ext_id)
