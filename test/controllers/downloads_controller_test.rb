@@ -7,7 +7,7 @@ class DownloadsControllerTest < ActionController::TestCase
     user = create(:public_health_user)
     download = create(:download, user_id: user.id)
     text = StringIO.new('text')
-    download.exports.attach(io: text, filename: 'text.txt', content_type: 'application/text')
+    download.export_files.attach(io: text, filename: 'text.txt', content_type: 'application/text')
     sign_in user
     get :download, params: { id: download.id }
     assert_response :success
@@ -17,7 +17,7 @@ class DownloadsControllerTest < ActionController::TestCase
     user = create(:public_health_user)
     download = create(:download, user_id: user.id)
     text = StringIO.new('text')
-    download.exports.attach(io: text, filename: 'text.txt', content_type: 'application/text')
+    download.export_files.attach(io: text, filename: 'text.txt', content_type: 'application/text')
     get :download, params: { id: download.id }
     # Redirect to the sign_in page.
     assert_response :redirect
@@ -28,7 +28,7 @@ class DownloadsControllerTest < ActionController::TestCase
     download = create(:download, user_id: first_user.id)
     second_user = create(:public_health_user)
     text = StringIO.new('text')
-    download.exports.attach(io: text, filename: 'text.txt', content_type: 'application/text')
+    download.export_files.attach(io: text, filename: 'text.txt', content_type: 'application/text')
     sign_in second_user
     get :download, params: { id: download.id }
     # Redirect to not found

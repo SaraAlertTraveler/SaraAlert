@@ -55,7 +55,7 @@ class ExportJob < ApplicationJob
   # Additional attachments can be chained off the returned download object
   def create_download(user_id, data, full_filename, export_type, content_type)
     download = Download.create(user_id: user_id, export_type: export_type, filename: full_filename)
-    download.exports.attach(io: data, filename: full_filename, content_type: content_type)
+    download.export_files.attach(io: data, filename: full_filename, content_type: content_type)
     download
   end
 end

@@ -7,7 +7,7 @@ class DownloadsController < ApplicationController
 
   def download
     redirect_to root_url unless current_user.can_export?
-    @export_url = rails_storage_proxy_path(@download.exports.first)
+    @export_url = rails_storage_proxy_path(@download.export_files.first)
   end
 
   # Hit this endpoint after the download link is clicked to remove download from database

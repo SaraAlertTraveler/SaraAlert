@@ -2,5 +2,5 @@
 
 # Generated exports for download
 class Download < ApplicationRecord
-  has_many_attached :exports
+  has_many_attached :export_files
 end

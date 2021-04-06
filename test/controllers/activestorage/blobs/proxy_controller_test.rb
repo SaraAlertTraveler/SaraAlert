@@ -8,8 +8,8 @@ class ActiveStorage::Blobs::ProxyControllerTest < ActionDispatch::IntegrationTes
   def setup
     @user = create(:public_health_user)
     @download = create(:download, user_id: @user.id)
-    @download.exports.attach(io: StringIO.new('text'), filename: 'text.txt', content_type: 'application/text')
-    @download_url = rails_storage_proxy_path(@download.exports.first, only_path: true)
+    @download.export_files.attach(io: StringIO.new('text'), filename: 'text.txt', content_type: 'application/text')
+    @download_url = rails_storage_proxy_path(@download.export_files.first, only_path: true)
   end
 
   test 'user that requested export can download' do
@@ -31,8 +31,8 @@ class ActiveStorage::Blobs::ProxyControllerTest < ActionDispatch::IntegrationTes
 
     # Corner case download without user relationship
     download = create(:download, user_id: nil)
-    download.exports.attach(io: StringIO.new('text'), filename: 'text.txt', content_type: 'application/text')
-    download_url = rails_storage_proxy_path(download.exports.first, only_path: true)
+    download.export_files.attach(io: StringIO.new('text'), filename: 'text.txt', content_type: 'application/text')
+    download_url = rails_storage_proxy_path(download.export_files.first, only_path: true)
     get download_url
     assert_redirected_to '/'
   end
