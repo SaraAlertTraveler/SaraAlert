@@ -105,7 +105,7 @@ class PublicHealthDashboard < ApplicationSystemTestCase
     @@public_health_export_verifier.verify_custom(user_label, settings) if settings[:actions]&.include?(:export) && settings[:confirm] == :start
   end
 
-  def import_epi_x(jurisdiction_id, workflow, file_name, validity, rejects, accept_duplicates)
+  def import_epi_x(jurisdiction, workflow, file_name, validity, rejects, accept_duplicates)
     click_on 'Isolation Monitoring' if workflow == :isolation
     click_on 'Import'
     find('a', text: "Epi-X (#{workflow})").click
@@ -113,9 +113,9 @@ class PublicHealthDashboard < ApplicationSystemTestCase
     click_on 'Upload'
     case validity
     when :valid
-      @@public_health_import_verifier.verify_epi_x_import_page(jurisdiction_id, workflow, file_name)
+      @@public_health_import_verifier.verify_epi_x_import_page(jurisdiction, workflow, file_name)
       select_monitorees_to_import(rejects, accept_duplicates)
-      @@public_health_import_verifier.verify_epi_x_import_data(jurisdiction_id, workflow, file_name, rejects, accept_duplicates)
+      @@public_health_import_verifier.verify_epi_x_import_data(jurisdiction, workflow, file_name, rejects, accept_duplicates)
     when :invalid_file
       assert_content('Please make sure that your import file is a .xlsx file.')
       find('.modal-header').find('.close').click
@@ -129,12 +129,12 @@ class PublicHealthDashboard < ApplicationSystemTestCase
       assert_content('File must contain at least one monitoree to import')
       find('.modal-header').find('.close').click
     when :invalid_fields
-      @@public_health_import_verifier.verify_epi_x_field_validation(jurisdiction_id, workflow, file_name)
+      @@public_health_import_verifier.verify_epi_x_field_validation(jurisdiction, workflow, file_name)
       find('.modal-header').find('.close').click
     end
   end
 
-  def import_sara_alert_format(jurisdiction_id, workflow, file_name, validity, rejects, accept_duplicates)
+  def import_sara_alert_format(jurisdiction, workflow, file_name, validity, rejects, accept_duplicates)
     click_on 'Isolation Monitoring' if workflow == :isolation
     click_on 'Import'
     find('a', text: "Sara Alert Format (#{workflow})").click
@@ -142,9 +142,9 @@ class PublicHealthDashboard < ApplicationSystemTestCase
     click_on 'Upload'
     case validity
     when :valid
-      @@public_health_import_verifier.verify_sara_alert_format_import_page(jurisdiction_id, workflow, file_name)
+      @@public_health_import_verifier.verify_sara_alert_format_import_page(jurisdiction, workflow, file_name)
       select_monitorees_to_import(rejects, accept_duplicates)
-      @@public_health_import_verifier.verify_sara_alert_format_import_data(jurisdiction_id, workflow, file_name, rejects, accept_duplicates)
+      @@public_health_import_verifier.verify_sara_alert_format_import_data(jurisdiction, workflow, file_name, rejects, accept_duplicates)
     when :invalid_file
       assert_content('Please make sure that your import file is a .xlsx file.')
       find('.modal-header').find('.close').click
@@ -158,7 +158,7 @@ class PublicHealthDashboard < ApplicationSystemTestCase
       assert_content('File must contain at least one monitoree to import')
       find('.modal-header').find('.close').click
     when :invalid_fields
-      @@public_health_import_verifier.verify_sara_alert_format_field_validation(jurisdiction_id, workflow, file_name)
+      @@public_health_import_verifier.verify_sara_alert_format_field_validation(jurisdiction, workflow, file_name)
       find('.modal-header').find('.close').click
     end
   end
