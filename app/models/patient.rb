@@ -917,7 +917,7 @@ class Patient < ApplicationRecord
 
   # Send a daily assessment to this monitoree (if currently eligible). By setting send_now to true, an assessment
   # will be sent immediately without any consideration of the monitoree's preferred_contact_time.
-  def send_assessment()
+  def send_assessment
     # Return UNLESS:
     # - in exposure: NOT closed AND within monitoring period OR
     # - in isolation: NOT closed (as patients on RRR linelist should receive notifications) OR
