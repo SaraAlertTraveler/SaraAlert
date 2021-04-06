@@ -46,12 +46,11 @@ class AdditionalPlannedTravel extends React.Component {
   }
 
   validate(callback) {
-    let self = this;
     schema
       .validate(this.state.current.patient, { abortEarly: false })
-      .then(function() {
+      .then(() => {
         // No validation issues? Invoke callback (move to next step)
-        self.setState({ errors: {} }, () => {
+        this.setState({ errors: {} }, () => {
           callback();
         });
       })
@@ -62,7 +61,7 @@ class AdditionalPlannedTravel extends React.Component {
           for (var issue of err.inner) {
             issues[issue['path']] = issue['errors'];
           }
-          self.setState({ errors: issues });
+          this.setState({ errors: issues });
         }
       });
   }

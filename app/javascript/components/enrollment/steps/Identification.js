@@ -3,16 +3,15 @@ import { PropTypes } from 'prop-types';
 import { Button, Card, Col, Form } from 'react-bootstrap';
 import Select from 'react-select';
 
-import _ from 'lodash';
 import * as yup from 'yup';
 import moment from 'moment-timezone';
 
 import DateInput from '../../util/DateInput';
 import InfoTooltip from '../../util/InfoTooltip';
-import { getAllLanguages, supportedLanguages } from '../../../data/supportedLanguages.js';
+import { tryToMatchLanguage, getLanguageSupported, getLanguagesAsOptions } from '../../../utils/Languages';
 
-// save as a constant to avoid multiple calls to `getAllLanguages` (which is semi-expensive)
-const ALL_LANGUAGES = getAllLanguages();
+const languageOptions = getLanguagesAsOptions();
+
 const WORKFLOW_OPTIONS = [
   { label: 'Exposure (contact)', value: 'exposure' },
   { label: 'Isolation (case)', value: 'isolation' },
@@ -26,7 +25,11 @@ class Identification extends React.Component {
       current: { ...this.props.currentState },
       errors: {},
       modified: {},
-      formattedLanguageOptions: this.formatLanguageOptions(),
+      primaryLanguageMessage: this.getPrimaryLanguageSupportMessage(tryToMatchLanguage(this.props.currentState.patient.primary_language)),
+      // The dropdown for languages requires the selected values to be in a special format
+      // maintain these values in state to avoid unnecessary computation in `render`
+      selectedPrimaryLanguage: this.formatLanguageAsOption(this.props.currentState.patient.primary_language),
+      selectedSecondaryLanguage: this.formatLanguageAsOption(this.props.currentState.patient.secondary_language),
     };
   }
 
@@ -34,7 +37,6 @@ class Identification extends React.Component {
     let value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
     let current = this.state.current;
     let modified = this.state.modified;
-    const self = this;
     event.persist();
     this.setState(
       {
@@ -42,7 +44,7 @@ class Identification extends React.Component {
         modified: { ...modified, patient: { ...modified.patient, [event.target.id]: value } },
       },
       () => {
-        self.props.setEnrollmentState({ ...self.state.modified });
+        this.props.setEnrollmentState({ ...this.state.modified });
       }
     );
   };
@@ -56,7 +58,6 @@ class Identification extends React.Component {
     let current = this.state.current;
     let modified = this.state.modified;
 
-    const self = this;
     event.persist();
 
     if (value) {
@@ -64,7 +65,7 @@ class Identification extends React.Component {
       let races_to_reset = this.props.race_options.exclusive;
 
       // Reset all races if exclusive option is selected
-      if (self.props.race_options.exclusive.map(options => options.race).includes(event.target.id)) {
+      if (this.props.race_options.exclusive.map(options => options.race).includes(event.target.id)) {
         races_to_reset = races_to_reset.concat(this.props.race_options.non_exclusive);
       }
 
@@ -81,7 +82,7 @@ class Identification extends React.Component {
         modified: { ...modified, patient: { ...current.patient, ...modified_races } },
       },
       () => {
-        self.props.setEnrollmentState({ ...self.state.modified });
+        this.props.setEnrollmentState({ ...this.state.modified });
       }
     );
   };
@@ -91,14 +92,13 @@ class Identification extends React.Component {
     const current = this.state.current;
     const modified = this.state.modified;
     const isIsolation = value === 'isolation';
-    const self = this;
     this.setState(
       {
         current: { ...current, isolation: isIsolation, patient: { ...current.patient, isolation: isIsolation } },
         modified: { ...modified, isolation: isIsolation, patient: { ...modified.patient, isolation: isIsolation } },
       },
       () => {
-        self.props.setEnrollmentState({ ...self.state.modified });
+        this.props.setEnrollmentState({ ...this.state.modified });
       }
     );
   };
@@ -106,7 +106,6 @@ class Identification extends React.Component {
   getWorkflowValue = () => (this.state.current.isolation ? WORKFLOW_OPTIONS[1] : WORKFLOW_OPTIONS[0]);
 
   handleDateChange = (field, date) => {
-    const self = this;
     this.setState(
       state => {
         return {
@@ -117,13 +116,13 @@ class Identification extends React.Component {
       () => {
         // Automatically calculate age field once a date of birth is entered.
         let age;
-        const dateOfBirth = self.state.current.patient.date_of_birth;
+        const dateOfBirth = this.state.current.patient.date_of_birth;
         // If date is undefined, age will stay undefined (which nulls out the age field)
         if (dateOfBirth) {
           age = moment().diff(moment(dateOfBirth), 'years');
-          age = age >= 0 ? age : self.state.age;
+          age = age >= 0 ? age : this.state.age;
         }
-        self.setState(
+        this.setState(
           state => {
             return {
               current: { ...state.current, patient: { ...state.current.patient, age } },
@@ -131,7 +130,7 @@ class Identification extends React.Component {
             };
           },
           () => {
-            self.props.setEnrollmentState({ ...self.state.modified });
+            this.props.setEnrollmentState({ ...this.state.modified });
           }
         );
       }
@@ -139,28 +138,31 @@ class Identification extends React.Component {
   };
 
   handleLanguageChange = (languageType, event) => {
+    const selectedLanguage = languageType === 'primary_language' ? 'selectedPrimaryLanguage' : 'selectedSecondaryLanguage';
     const value = event.value;
     const current = this.state.current;
     const modified = this.state.modified;
-    const self = this;
-    this.setState(
-      {
-        current: { ...current, patient: { ...current.patient, [languageType]: value } },
-        modified: { ...modified, patient: { ...modified.patient, [languageType]: value } },
-      },
+    let newState = {
+      current: { ...current, patient: { ...current.patient, [languageType]: value } },
+      modified: { ...modified, patient: { ...modified.patient, [languageType]: value } },
+      [selectedLanguage]: event,
+    };
+    if (languageType === 'primary_language') {
+      // Calculate a new primaryLanguageMessage if that value has changed
+      newState['primaryLanguageMessage'] = this.getPrimaryLanguageSupportMessage({ c: event.value, d: event.label });
+    }
+    this.setState(newState),
       () => {
-        self.props.setEnrollmentState({ ...self.state.modified });
-      }
-    );
+        this.props.setEnrollmentState({ ...this.state.modified });
+      };
   };
 
   validate = callback => {
-    const self = this;
     schema
       .validate(this.state.current.patient, { abortEarly: false })
       .then(function() {
         // No validation issues? Invoke callback (move to next step)
-        self.setState({ errors: {} }, () => {
+        this.setState({ errors: {} }, () => {
           callback();
         });
       })
@@ -171,52 +173,36 @@ class Identification extends React.Component {
           for (var issue of err.inner) {
             issues[issue['path']] = issue['errors'];
           }
-          self.setState({ errors: issues });
+          this.setState({ errors: issues });
         }
       });
   };
 
-  formatLanguageOptions = () => {
-    const langOptions = ALL_LANGUAGES.map(lang => {
-      const fullySupported = lang.supported.sms && lang.supported.email && lang.supported.phone;
-      const langLabel = fullySupported ? lang.name : lang.name + '*';
-      return { value: lang.name, label: langLabel };
-    });
-
-    // lodash's 'remove()' actually removes the values from the object
-    let supportedNames = supportedLanguages.map(sL => sL.name);
-    const supportedLangsFormatted = _.remove(langOptions, n => supportedNames.includes(n.value));
-    const unsupportedLangsFormatted = langOptions;
-
-    const groupedOptions = [
-      {
-        label: 'Supported Languages',
-        options: supportedLangsFormatted,
-      },
-      {
-        label: 'Unsupported Languages',
-        options: unsupportedLangsFormatted,
-      },
-    ];
-    return groupedOptions;
+  // Format a language as {label: 'Label', value: val}
+  // Accepts isoCode or Display for `lang`
+  formatLanguageAsOption = lang => {
+    let matchedLang = tryToMatchLanguage(lang);
+    let formattedOption = { label: null, value: null };
+    if (matchedLang) {
+      formattedOption.label = matchedLang.d;
+      formattedOption.value = matchedLang.c;
+    }
+    return formattedOption;
   };
 
-  getLanguageValue = language => {
-    return ALL_LANGUAGES.find(l => l.value === language);
-  };
-
-  renderPrimaryLanguageSupportMessage = selectedLanguage => {
-    if (selectedLanguage) {
-      const languageJson = ALL_LANGUAGES.find(l => l.name === selectedLanguage);
-
+  // language must be in the exact format
+  // { c: isoCode, d: displayName }
+  getPrimaryLanguageSupportMessage = language => {
+    let message = null;
+    if (language) {
+      const languageJson = getLanguageSupported(language);
       if (languageJson && languageJson.supported) {
         const sms = languageJson.supported.sms;
         const email = languageJson.supported.email;
         const phone = languageJson.supported.phone;
         const fullySupported = sms && email && phone;
-
         if (!fullySupported) {
-          let message = languageJson.name;
+          message = languageJson.name;
           if (!sms && !email && !phone) {
             message += ' is not currently supported by Sara Alert. Any messages sent to this monitoree will be in English.';
           } else if (!sms && !email && phone) {
@@ -238,41 +224,10 @@ class Identification extends React.Component {
             message +=
               ' is supported for email and SMS text reporting methods only. If telephone call is selected as the preferred reporting method, the call will be in English.';
           }
-          return (
-            <i>
-              <b>* Warning:</b> {message}
-            </i>
-          );
         }
       }
     }
-  };
-
-  formatGroupLabel = data => {
-    // This function styles the language counters we see in the Language Dropdowns
-    const groupStyles = {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    };
-    const groupBadgeStyles = {
-      backgroundColor: '#EBECF0',
-      borderRadius: '2px',
-      color: '#172B4D',
-      display: 'inline-block',
-      fontSize: 12,
-      fontWeight: 'normal',
-      lineHeight: '1',
-      minWidth: 1,
-      padding: '5px 8px',
-      textAlign: 'center',
-    };
-    return (
-      <div style={groupStyles}>
-        <span>{data.label}</span>
-        <span style={groupBadgeStyles}>{data.options.length}</span>
-      </div>
-    );
+    return message;
   };
 
   render() {
@@ -510,9 +465,8 @@ class Identification extends React.Component {
                   </Form.Label>
                   <Select
                     inputId="primary-language-select"
-                    value={this.getLanguageValue(this.state.current.patient.primary_language)}
-                    options={this.state.formattedLanguageOptions}
-                    formatGroupLabel={this.formatGroupLabel}
+                    value={this.state.selectedPrimaryLanguage}
+                    options={languageOptions}
                     onChange={e => this.handleLanguageChange('primary_language', e)}
                     placeholder=""
                     styles={cursorPointerStyle}
@@ -529,9 +483,8 @@ class Identification extends React.Component {
                   </Form.Label>
                   <Select
                     inputId="secondary-language-select"
-                    value={this.getLanguageValue(this.state.current.patient.secondary_language)}
-                    formatGroupLabel={this.formatGroupLabel}
-                    options={this.state.formattedLanguageOptions}
+                    value={this.state.selectedSecondaryLanguage}
+                    options={languageOptions}
                     onChange={e => this.handleLanguageChange('secondary_language', e)}
                     placeholder=""
                     styles={cursorPointerStyle}
@@ -544,7 +497,11 @@ class Identification extends React.Component {
               </Form.Row>
               <Form.Row>
                 <Form.Group as={Col} sm={24} md={12} controlId="primary_language_support_message" className="pr-md-4 mb-0">
-                  {this.renderPrimaryLanguageSupportMessage(this.state.current.patient.primary_language)}
+                  {this.state.primaryLanguageMessage && (
+                    <i>
+                      <b>* Warning:</b> {this.state.primaryLanguageMessage}
+                    </i>
+                  )}
                 </Form.Group>
                 <Form.Group as={Col} sm={24} md={12} controlId="secondary_language_support_message" className="pl-md-4 mb-0">
                   {this.state.current.patient.secondary_language && (
@@ -692,6 +649,7 @@ const schema = yup.object().shape({
 Identification.propTypes = {
   currentState: PropTypes.object,
   race_options: PropTypes.object,
+  setEnrollmentState: PropTypes.func,
   next: PropTypes.func,
 };
 

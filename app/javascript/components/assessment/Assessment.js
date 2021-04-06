@@ -46,7 +46,6 @@ class Assessment extends React.Component {
 
   submit = submitData => {
     submitData.threshold_hash = this.props.threshold_hash;
-    var self = this;
     axios.defaults.headers.common['X-CSRF-Token'] = this.props.authenticity_token;
     axios({
       method: 'post',
@@ -55,8 +54,8 @@ class Assessment extends React.Component {
       }`,
       data: submitData,
     })
-      .then(function() {
-        if (self.props.reload) {
+      .then(() => {
+        if (this.props.reload) {
           location.reload(true);
         }
       })
