@@ -2,9 +2,15 @@ import LANGUAGES from '../data/minifiedLanguages.json'
 import supportedLanguages from '../data/supportedLanguages'
 import _ from 'lodash'
 
-// Attempts to match
+/**
+ * Tries to match the input to a language in the system.
+ * It accepts isoCodes or Display Names
+ * If unable to match it, it returns null
+ * @param {Object} potentialCodeorLanguage
+ * @return {Object}
+ */
 function tryToMatchLanguage (potentialCodeorLanguage) {
-  if (!potentialCodeorLanguage) return false
+  if (!potentialCodeorLanguage) return null
   let matchedLang = LANGUAGES.find(o => o.c === potentialCodeorLanguage);
   if (!matchedLang) {
     matchedLang = LANGUAGES.find(o => o.d === potentialCodeorLanguage);
@@ -12,9 +18,13 @@ function tryToMatchLanguage (potentialCodeorLanguage) {
   return matchedLang
 }
 
-// gets the `supported` messaging options for a specific language
-// Note: the language passed in should in the format
-// {c: isoCode, d: displayName}
+/**
+ * Returns an object containing all the contact-method booleans
+ * for a language. The values default to false, unless specified true in
+ * 'supportedLanguages.js'
+ * @param {Object} language - must be in the form of {c: isoCode, d: displayName}
+ * @return {Object}
+ */
 function getLanguageSupported(language = {c:null, d:null}) {
   let supportedLanguageReference = supportedLanguages.find(y => y.name === language.d)
   if (supportedLanguageReference) {
@@ -25,15 +35,21 @@ function getLanguageSupported(language = {c:null, d:null}) {
       "code": language.c,
       "supported": {
         "sms": false,
-          "email": false,
-          "phone": false
-        }
+        "email": false,
+        "phone": false
       }
     }
-    return supportedLanguageReference
+  }
+  return supportedLanguageReference
 }
 
-// gets the languages options formatted for the Select Dropdown
+/**
+ * Returns a grouped array of all Languages in the system, formatted to work
+ * with react-select (AKA in the format { value: isoCode, label: displayName }).
+ * The groups are by whether the language is Supported and Unsupported.
+ * These options are all alphabetized as well.
+ * @return {Array} groupedOptions
+ */
 function getLanguagesAsOptions () {
   let allLangs = LANGUAGES.map(x => getLanguageSupported(x))
   allLangs = allLangs.sort((a, b) => a.name.localeCompare(b.name))
@@ -63,12 +79,12 @@ function getLanguagesAsOptions () {
 
 function convertLanguageCodeToName (val) {
   const matchedLang = LANGUAGES.find(o => o.c === val)
-  return  matchedLang ? matchedLang.d : ''
+  return matchedLang ? matchedLang.d : ''
 }
 
 function convertLanguageNameToISOCode (val) {
   const matchedLang = LANGUAGES.find(o => o.d === val)
-  return  matchedLang ? matchedLang.c : ''
+  return matchedLang ? matchedLang.c : ''
 }
 
 export {

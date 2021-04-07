@@ -7,6 +7,7 @@ module PatientHelper
     @inverted_iso_lookup[PATIENT_HELPER_FILES[:languages][lang_iso_code.to_sym][:display].to_s.downcase] = lang_iso_code
   end
 
+  # This list contains all of the same states listed in app/javascript/components/data.js
   def state_names
     PATIENT_HELPER_FILES[:state_names]
   end

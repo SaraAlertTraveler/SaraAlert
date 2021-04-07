@@ -195,6 +195,9 @@ class Identification extends React.Component {
   getPrimaryLanguageSupportMessage = language => {
     let message = null;
     if (language) {
+      // Don't include any trailing asterisks (*) from unsupported languages in the message
+      language.d = language.d.replace(/\*+$/, '');
+
       const languageJson = getLanguageSupported(language);
       if (languageJson && languageJson.supported) {
         const sms = languageJson.supported.sms;
