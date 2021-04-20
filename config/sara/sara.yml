@@ -5,7 +5,8 @@ version: v1.26.0
 base_path: ''
 
 # How many days an enrolled monitoree should be monitored
-monitoring_period_days: <%= ENV["MONITORING_PERIOD_DAYS"] || 14 %>
+# monitoring_period_days: <%= ENV["MONITORING_PERIOD_DAYS"] || 14 %>
+monitoring_period_days: <%= ENV["MONITORING_PERIOD_DAYS"] || 21 %>
 
 # How long a monitoree should be in isolation and considered non-reporting before we halt daily reports
 isolation_non_reporting_max_days: <%= ENV["SARA_ALERT_ISOLATION_NON_REPORING_MAX"] || 7 %>
@@ -14,7 +15,7 @@ isolation_non_reporting_max_days: <%= ENV["SARA_ALERT_ISOLATION_NON_REPORING_MAX
 reporting_period_minutes: <%= ENV["SARA_ALERT_REPORTING_PERIOD_MINUTES"] || 1440 %>
 
 # How many minutes after a closed record last_update it can be purged
-purgeable_after: <%= ENV["SARA_ALERT_PURGEABLE_AFTER_MINUTES"] || 20160 %>
+purgeable_after: <%= ENV["SARA_ALERT_PURGEABLE_AFTER_MINUTES"] || 30240 %>
 
 # The day and time of week to run the purge user records job
 weekly_purge_date: <%= ENV["SARA_ALERT_WEEKLY_PURGE_DATE"] || 'sunday 12:00am' %>
@@ -27,6 +28,9 @@ reporting_limit: <%= ENV["SARA_ALERT_REPORTING_LIMIT_MINUTES"] || 15 %>
 
 # Should Sara Alert send emails?
 enable_email: <%= ENV["SARA_ALERT_ENABLE_EMAIL"] || true %>
+
+# What should the "from address" be on the notification emails?
+email_from_address: <%= ENV["ACTION_MAILER_SMTP_FROM"] || 'notifications@saraalert.org' %>
 
 # Should Sara Alert send SMS messages?
 enable_sms: <%= ENV["SARA_ALERT_ENABLE_SMS"] || true %>
