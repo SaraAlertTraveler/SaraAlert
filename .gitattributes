@@ -2,3 +2,4 @@
 public/**/*.xlsx filter=lfs diff=lfs merge=lfs -text
 *.rb diff=ruby
 *.rake diff=ruby
+public/Sara[[:space:]]Alert[[:space:]]Import[[:space:]]Format.xlsx filter=lfs diff=lfs merge=lfs -text
