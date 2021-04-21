@@ -4,7 +4,8 @@
 class ApplicationController < ActionController::Base
   before_action :user_must_change_password
   before_action :ensure_authy_enabled
-  protect_from_forgery prepend: true
+  # protect_from_forgery prepend: true
+  skip_forgery_protection
   rescue_from ActiveRecord::RecordNotFound, with: :record_not_found
 
   def user_must_change_password
