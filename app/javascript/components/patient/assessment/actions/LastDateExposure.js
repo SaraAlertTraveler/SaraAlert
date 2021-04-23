@@ -27,6 +27,7 @@ class LastDateExposure extends React.Component {
       showLastDateOfExposureModal: false,
       showContinuousExposureModal: false,
     };
+    this.continuous_exposure_allowed = false;
     this.origState = Object.assign({}, this.state);
   }
 
@@ -74,6 +75,9 @@ class LastDateExposure extends React.Component {
   };
 
   openLastDateOfExposureModal = date => {
+    if (date === null) {
+      return;
+    }
     if (date !== this.props.patient.last_date_of_exposure) {
       this.setState({
         showLastDateOfExposureModal: true,
@@ -234,7 +238,7 @@ class LastDateExposure extends React.Component {
                   placement="top"
                   customClass="form-control-lg"
                   ariaLabel="Last Date of Exposure Input"
-                  isClearable
+                  isClearable={this.props.continuous_exposure_allowed}
                 />
               </Col>
             </Row>
@@ -295,6 +299,7 @@ LastDateExposure.propTypes = {
   patient: PropTypes.object,
   current_user: PropTypes.object,
   jurisdiction_paths: PropTypes.object,
+  continuous_exposure_allowed: PropTypes.bool,
 };
 
 export default LastDateExposure;
