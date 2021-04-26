@@ -7,9 +7,7 @@ import { formatDate } from '../../utils/DateTime';
 import _ from 'lodash';
 import axios from 'axios';
 import moment from 'moment';
-import ReactTooltip from 'react-tooltip';
 
-import ApplyToHousehold from './household_actions/ApplyToHousehold';
 import DateInput from '../util/DateInput';
 import InfoTooltip from '../util/InfoTooltip';
 import reportError from '../util/ReportError';
@@ -20,7 +18,9 @@ class LastDateExposure extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
+      previous_last_date_of_exposure: this.props.patient.last_date_of_exposure,
       last_date_of_exposure: this.props.patient.last_date_of_exposure,
+      lde_modal: this.props.patient.last_date_of_exposure,
       continuous_exposure: !!this.props.patient.continuous_exposure,
       loading: false,
       noMembersSelected: false,
@@ -29,6 +29,7 @@ class LastDateExposure extends React.Component {
       showLastDateOfExposureModal: false,
       showContinuousExposureModal: false,
     };
+    this.continuous_exposure_allowed = false;
     this.origState = Object.assign({}, this.state);
   }
 
@@ -75,10 +76,39 @@ class LastDateExposure extends React.Component {
     });
   };
 
+  handleDateChangeFromModal = date => {
+    if (date === null) {
+      this.setState({
+        lde_modal: null,
+      });
+    } else {
+      this.setState({
+        previous_last_date_of_exposure: date,
+        lde_modal: date,
+        last_date_of_exposure: date,
+      });
+    }
+  };
+
   openLastDateOfExposureModal = date => {
+    if (date === null) {
+      this.setState({
+        showLastDateOfExposureModal: true,
+        previous_last_date_of_exposure: this.state.last_date_of_exposure,
+        lde_modal: date,
+        last_date_of_exposure: date,
+        continuous_exposure: date === null,
+        apply_to_household: false,
+        apply_to_household_ids: [],
+        noMembersSelected: false,
+      });
+      return;
+    }
     if (date !== this.props.patient.last_date_of_exposure) {
       this.setState({
         showLastDateOfExposureModal: true,
+        previous_last_date_of_exposure: this.state.last_date_of_exposure,
+        lde_modal: date,
         last_date_of_exposure: date,
         continuous_exposure: date === null,
         apply_to_household: false,
@@ -105,59 +135,42 @@ class LastDateExposure extends React.Component {
     return eom === 'Continuous Exposure' ? eom : formatDate(eom);
   };
 
-  endOfMonitoringTooltipText = () => {
-    return (
-      <div>
-        Calculated by the system as Last Date of Exposure + {this.props.monitoring_period_days} days
-        <div>
-          <i>Only relevant for Exposure Workflow</i>
-        </div>
-      </div>
-    );
-  };
-
-  createModal = (title, message, close, submit) => {
+  createModal = (title, close, submit) => {
     return (
       <Modal size="lg" show centered onHide={close}>
         <Modal.Header>
           <Modal.Title>{title}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <p>{message}</p>
-          {this.props.household_members.length > 0 && (
-            <ApplyToHousehold
-              household_members={this.props.household_members}
-              current_user={this.props.current_user}
-              jurisdiction_paths={this.props.jurisdiction_paths}
-              handleApplyHouseholdChange={this.handleApplyHouseholdChange}
-              handleApplyHouseholdIdsChange={this.handleApplyHouseholdIdsChange}
+          <p>
+            {this.state.lde_modal
+              ? 'Are you sure you want to modify the Last Date of Exposure?'
+              : `Last Date of Exposure is required and cannot be changed to blank. The last saved date was \
+            ${moment(this.state.previous_last_date_of_exposure).format('MM/DD/YYYY')}. You may update this date below.`}
+          </p>
+          <React.Fragment>
+            <p className="mb-2">
+              Update <b>Last Date of Exposure</b> to:
+            </p>
+            <DateInput
+              id="apply_to_household_cm_exp_only_date"
+              date={this.state.lde_modal}
+              minDate={'2020-01-01'}
+              maxDate={moment()
+                .add(30, 'days')
+                .format('YYYY-MM-DD')}
+              onChange={date => this.handleDateChangeFromModal(date)}
+              placement="bottom"
+              customClass="form-control-lg"
+              ariaLabel="Update Last Exposure Date Input"
             />
-          )}
-          {!!this.props.patient.continuous_exposure && !this.state.continuous_exposure && (
-            <div className="mt-2">
-              <Form.Label className="nav-input-label">Update Last Date of Exposure to:</Form.Label>
-              <DateInput
-                id="last_date_of_exposure"
-                date={this.state.last_date_of_exposure}
-                maxDate={moment()
-                  .add(30, 'days')
-                  .format('YYYY-MM-DD')}
-                onChange={date => this.setState({ last_date_of_exposure: date })}
-                placement="top"
-                customClass="form-control-lg"
-                ariaLabel="Update Last Date of Exposure to Input"
-              />
-            </div>
-          )}
+          </React.Fragment>
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary btn-square" onClick={close}>
             Cancel
           </Button>
-          <Button
-            variant="primary btn-square"
-            onClick={submit}
-            disabled={this.state.loading || this.state.noMembersSelected || (!this.state.last_date_of_exposure && !this.state.continuous_exposure)}>
+          <Button variant="primary btn-square" onClick={submit} disabled={this.state.loading || this.state.noMembersSelected || !this.state.lde_modal}>
             {this.state.loading && (
               <React.Fragment>
                 <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>&nbsp;
@@ -166,11 +179,6 @@ class LastDateExposure extends React.Component {
             <span data-for="lde-submit" data-tip="">
               Submit
             </span>
-            {this.state.noMembersSelected && (
-              <ReactTooltip id="lde-submit" multiline={true} place="top" type="dark" effect="solid" className="tooltip-container">
-                <div>Please select at least one household member or change your selection to apply to this monitoree only</div>
-              </ReactTooltip>
-            )}
           </Button>
         </Modal.Footer>
       </Modal>
@@ -192,15 +200,11 @@ class LastDateExposure extends React.Component {
             this.submit
           )} */}
         {this.state.showLastDateOfExposureModal &&
-          this.createModal(
-            'Last Date of Exposure',
-            `Are you sure you want to ${this.state.last_date_of_exposure ? 'modify' : 'clear'} the Last Date of Exposure${
-              this.state.last_date_of_exposure ? ` to ${moment(this.state.last_date_of_exposure).format('MM/DD/YYYY')}` : ''
-            }? The Last Date of Exposure will be updated ${this.state.last_date_of_exposure ? '' : 'to blank '}
-             for the selected record${this.props.household_members.length > 1 ? '(s):' : '.'}`,
-            this.closeModal,
-            this.submit
-          )}
+          this.createModal('Last Date of Exposure', this.closeModal, () => {
+            this.setState({ last_date_of_exposure: this.state.lde_modal }, () => {
+              this.submit();
+            });
+          })}
         {/* {this.state.showContinuousExposureModal &&
           this.createModal(
             'Continuous Exposure',
@@ -236,7 +240,7 @@ class LastDateExposure extends React.Component {
                   placement="top"
                   customClass="form-control-lg"
                   ariaLabel="Last Date of Exposure Input"
-                  isClearable
+                  isClearable={this.props.continuous_exposure_allowed}
                 />
               </Col>
             </Row>
@@ -273,7 +277,7 @@ class LastDateExposure extends React.Component {
               <Row className="reports-actions-title">
                 <Col>
                   <span className="nav-input-label">END OF MONITORING</span>
-                  <InfoTooltip getCustomText={this.endOfMonitoringTooltipText} location="right"></InfoTooltip>
+                  <InfoTooltip tooltipTextKey="lastDateOfExposure" location="right"></InfoTooltip>
                 </Col>
               </Row>
               <Row>
@@ -297,6 +301,7 @@ LastDateExposure.propTypes = {
   patient: PropTypes.object,
   current_user: PropTypes.object,
   jurisdiction_paths: PropTypes.object,
+  continuous_exposure_allowed: PropTypes.bool,
 };
 
 export default LastDateExposure;
