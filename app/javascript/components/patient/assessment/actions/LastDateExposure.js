@@ -76,6 +76,20 @@ class LastDateExposure extends React.Component {
     });
   };
 
+  handleDateChangeFromModal = date => {
+    if (date === null) {
+      this.setState({
+        lde_modal: null,
+      });
+    } else {
+      this.setState({
+        previous_last_date_of_exposure: date,
+        lde_modal: date,
+        last_date_of_exposure: date,
+      });
+    }
+  };
+
   openLastDateOfExposureModal = date => {
     if (date === null) {
       this.setState({
@@ -92,7 +106,9 @@ class LastDateExposure extends React.Component {
     }
     if (date !== this.props.patient.last_date_of_exposure) {
       this.setState({
+        showLastDateOfExposureModal: true,
         previous_last_date_of_exposure: this.state.last_date_of_exposure,
+        lde_modal: date,
         last_date_of_exposure: date,
         continuous_exposure: date === null,
         apply_to_household: false,
@@ -119,14 +135,19 @@ class LastDateExposure extends React.Component {
     return eom === 'Continuous Exposure' ? eom : formatDate(eom);
   };
 
-  createModal = (title, message, close, submit) => {
+  createModal = (title, close, submit) => {
     return (
       <Modal size="lg" show centered onHide={close}>
         <Modal.Header>
           <Modal.Title>{title}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <p>{message}</p>
+          <p>
+            {this.state.lde_modal
+              ? 'Are you sure you want to modify the Last Date of Exposure?'
+              : `Last Date of Exposure is required and cannot be changed to blank. The last saved date was \
+            ${moment(this.state.previous_last_date_of_exposure).format('MM/DD/YYYY')}. You may update this date below.`}
+          </p>
           <React.Fragment>
             <p className="mb-2">
               Update <b>Last Date of Exposure</b> to:
@@ -138,7 +159,7 @@ class LastDateExposure extends React.Component {
               maxDate={moment()
                 .add(30, 'days')
                 .format('YYYY-MM-DD')}
-              onChange={date => this.setState({ lde_modal: date })}
+              onChange={date => this.handleDateChangeFromModal(date)}
               placement="bottom"
               customClass="form-control-lg"
               ariaLabel="Update Last Exposure Date Input"
@@ -149,10 +170,7 @@ class LastDateExposure extends React.Component {
           <Button variant="secondary btn-square" onClick={close}>
             Cancel
           </Button>
-          <Button
-            variant="primary btn-square"
-            onClick={submit}
-            disabled={this.state.loading || this.state.noMembersSelected || (!this.state.last_date_of_exposure && !this.state.lde_modal)}>
+          <Button variant="primary btn-square" onClick={submit} disabled={this.state.loading || this.state.noMembersSelected || !this.state.lde_modal}>
             {this.state.loading && (
               <React.Fragment>
                 <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>&nbsp;
@@ -182,16 +200,11 @@ class LastDateExposure extends React.Component {
             this.submit
           )} */}
         {this.state.showLastDateOfExposureModal &&
-          this.createModal(
-            'Last Date of Exposure',
-            `Last Date of Exposure is required and cannot be changed to blank. The last saved date was ${moment(
-              this.state.previous_last_date_of_exposure
-            ).format('MM/DD/YYYY')}. You may update this date below.`,
-            this.closeModal,
-            () => {
-              this.setState({ last_date_of_exposure: this.state.lde_modal, showLastDateOfExposureModal: false });
-            }
-          )}
+          this.createModal('Last Date of Exposure', this.closeModal, () => {
+            this.setState({ last_date_of_exposure: this.state.lde_modal }, () => {
+              this.submit();
+            });
+          })}
         {/* {this.state.showContinuousExposureModal &&
           this.createModal(
             'Continuous Exposure',
