@@ -15,10 +15,7 @@ const TOOLTIP_TEXT = {
   lastDateOfExposure: (
     <div>
       Used by the system to automatically calculate the End of Monitoring Date.
-      <div>
-        <i>Only relevant for Exposure Workflow</i>
-      </div>
-      <div>Field cannot be left blank</div>
+      <div>This field is required and cannot be blank.</div>
     </div>
   ),
 
