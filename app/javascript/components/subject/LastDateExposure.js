@@ -20,6 +20,7 @@ class LastDateExposure extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
+      previous_last_date_of_exposure: this.props.patient.last_date_of_exposure,
       last_date_of_exposure: this.props.patient.last_date_of_exposure,
       continuous_exposure: !!this.props.patient.continuous_exposure,
       loading: false,
@@ -76,13 +77,18 @@ class LastDateExposure extends React.Component {
     });
   };
 
-  openLastDateOfExposureModal = date => {
-    if (date === null) {
-      return;
+  lastDateOfExposureBlur = () => {
+    if (this.state.last_date_of_exposure === null) {
+      this.setState({
+        last_date_of_exposure: this.state.previous_last_date_of_exposure,
+      });
     }
+  };
+
+  openLastDateOfExposureModal = date => {
     if (date !== this.props.patient.last_date_of_exposure) {
       this.setState({
-        showLastDateOfExposureModal: true,
+        previous_last_date_of_exposure: this.state.last_date_of_exposure,
         last_date_of_exposure: date,
         continuous_exposure: date === null,
         apply_to_household: false,
@@ -116,6 +122,7 @@ class LastDateExposure extends React.Component {
         <div>
           <i>Only relevant for Exposure Workflow</i>
         </div>
+        <div>Field cannot be left blank</div>
       </div>
     );
   };
@@ -237,6 +244,7 @@ class LastDateExposure extends React.Component {
                     .add(30, 'days')
                     .format('YYYY-MM-DD')}
                   onChange={this.openLastDateOfExposureModal}
+                  onBlur={this.lastDateOfExposureBlur}
                   placement="top"
                   customClass="form-control-lg"
                   ariaLabel="Last Date of Exposure Input"
