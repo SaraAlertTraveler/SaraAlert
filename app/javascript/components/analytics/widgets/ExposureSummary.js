@@ -8,7 +8,9 @@ import _ from 'lodash';
 
 import CustomizedAxisTick from './CustomizedAxisTick';
 
-const WORKFLOWS = ['Exposure', 'Isolation'];
+// const WORKFLOWS = ['Exposure', 'Isolation'];
+const WORKFLOWS = ['Exposure'];
+
 const RISKFACTORS = [
   'Close Contact with Known Case',
   'Travel from Affected Country or Area',
