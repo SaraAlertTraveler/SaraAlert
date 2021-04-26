@@ -18,6 +18,7 @@ const TOOLTIP_TEXT = {
       <div>
         <i>Only relevant for Exposure Workflow</i>
       </div>
+      <div>Field cannot be left blank</div>
     </div>
   ),
 
