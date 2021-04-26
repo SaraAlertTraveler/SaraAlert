@@ -135,7 +135,7 @@ class DateInput extends React.Component {
               onChange={this.handleDateChange}
               onChangeRaw={this.handleRawChange}
               onSelect={this.handleSelect}
-              onBlur={this.handleOnBlur}
+              onBlur={this.props.onBlur || this.handleOnBlur}
               onKeyDown={this.handleKeyDown}
               className={this.props.customClass}
               customInput={
@@ -182,6 +182,7 @@ DateInput.propTypes = {
   placement: PropTypes.oneOf(['top', 'bottom', 'left', 'right', 'auto']),
   isInvalid: PropTypes.bool,
   isClearable: PropTypes.bool,
+  onBlur: PropTypes.func,
   replaceBlank: PropTypes.bool,
   clearInvalid: PropTypes.bool,
   customClass: PropTypes.string,
